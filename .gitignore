@@ -209,6 +209,11 @@ build/Release
 node_modules/
 jspm_packages/
 
+# ormconfig
+ormconfig.json
+
+#
+
 # Typescript v1 declaration files
 typings/
 
