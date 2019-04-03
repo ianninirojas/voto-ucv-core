@@ -1,7 +1,7 @@
 {
-  "name": "jwt-express-typeorm",
+  "name": "voto-ucv-core",
   "version": "0.0.1",
-  "description": "Awesome project developed with TypeORM.",
+  "description": "Core Sistema Votación de la UCV.",
   "author": "Jose Francisco Iannini Rojas <iannini.rojas@gmail.com>",
   "license": "MIT",
   "devDependencies": {

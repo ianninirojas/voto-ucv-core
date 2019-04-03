@@ -1,16 +1,19 @@
 import {
-  PublicAccount,
   Mosaic,
   UInt64,
   Address,
-  TransferTransaction,
+  PublicAccount,
   MosaicProperties,
-  MosaicSupplyType
+  MosaicSupplyType,
+  TransferTransaction,
+  AggregateTransaction,
 } from 'nem2-sdk';
 
 import * as moment from 'moment'
 
 // models
+import { nemElection } from "../models/nemElection";
+import { nemElectoralRegister } from "../models/nemElectoralRegister";
 import { nemElectoralCommission } from "../models/nemElectoralCommission";
 
 // services
@@ -28,13 +31,18 @@ import { CodeTypes } from "../constants/codeType";
 export const nemElectoralEvent = {
 
   getMosaicVote(electoralEventPublicAccount: any) {
-    return nemTransactionService.searchTransaction(electoralEventPublicAccount, TransferTransaction, (transactionElectoralEvent: any): any => {
-      const payload = JSON.parse(transactionElectoralEvent.message.payload);
-      if (payload.code === CodeTypes.CreateMosaicVote)
-        return payload.data;
-      else
-        return false;
-    });
+    return nemTransactionService.searchTransaction(electoralEventPublicAccount, AggregateTransaction,
+      (transactionMosaicVoteCreate: any): any => {
+        for (const innerTransaction of transactionMosaicVoteCreate.innerTransactions) {
+          if (innerTransaction instanceof TransferTransaction) {
+            const payload = JSON.parse(innerTransaction.message.payload);
+            if (payload.code === CodeTypes.CreateMosaicVote)
+              return payload.data;
+            else
+              return false;
+          }
+        }
+      });
   },
 
   async createMosaicToVote(eventElectoralAddress: Address, mosaicName: string) {
@@ -48,10 +56,10 @@ export const nemElectoralEvent = {
         transferable: true,
         levyMutable: false,
         divisibility: 0,
-        duration: UInt64.fromUint(0),
+        duration: UInt64.fromUint(1000),
       });
 
-      const mosaicDefinitionTransaction = nemMosaicService.mosaicDefinitionTransaction(electoralCommissionNamespace, mosaicName, mosaicProperties);
+      const mosaicDefinitionTransaction = nemMosaicService.mosaicDefinitionTransaction(electoralCommissionAccount, mosaicProperties);
 
       const mosaicSupplyChangeTransaction = nemMosaicService.mosaicSupplyChangeTransaction(mosaicDefinitionTransaction.mosaicId, MosaicSupplyType.Increase, UInt64.fromUint(1))
 
@@ -96,17 +104,19 @@ export const nemElectoralEvent = {
 
   async finish(electoralEventPublicKey: string) {
     try {
-
       const electoralEventPublicAccount = nemAccountService.getPublicAccountFromPublicKey(electoralEventPublicKey);
       const transactionElectoralEvent = await this.exist(electoralEventPublicAccount);
-
       if (!transactionElectoralEvent)
-        return { finished: false, data: "electoral event not exist" }
+        return { finished: false, data: [{ electoralEvent: "evento electoral no existe" }] }
+
+      const getMosaicVoteResponse = await this.getMosaicVote(electoralEventPublicAccount);
+      if (!getMosaicVoteResponse)
+        return { activated: false, data: [{ electoralEvent: "evento electoral no está activo" }] }
 
       const finished = await this.finished(electoralEventPublicAccount);
 
       if (!finished)
-        return { finished: false, data: "electoral event already finished" }
+        return { finished: false, data: [{ electoralEvent: "evento electoral ya ha finalizado" }] }
 
 
       let message = JSON.stringify({
@@ -135,26 +145,31 @@ export const nemElectoralEvent = {
 
   async activate(electoralEventPublicKey: string) {
     const electoralEventPublicAccount = nemAccountService.getPublicAccountFromPublicKey(electoralEventPublicKey);
-    const transactionElectoralEvent = await this.exist(electoralEventPublicAccount);
-
-    if (!transactionElectoralEvent)
-      return { activated: false, data: "electoral event not exist" }
-
-    const electoralEvent = transactionElectoralEvent.message.payload.data;
-
-    const getMosaicVoteResponse = await this.getMosaicVote(electoralEventPublicAccount);
-    if (getMosaicVoteResponse)
-      return { activated: false, data: "electoral event already active" }
-
-    const mosaicName = `${electoralEvent.name.split(' ').join('-')}-voto`;
-    const electoralEventAddress = electoralEventPublicAccount.address;
     try {
-      await this.createMosaicToVote(electoralEventAddress, mosaicName);
-    } catch (error) {
+      const transactionElectoralEvent = await this.exist(electoralEventPublicAccount);
+      if (!transactionElectoralEvent)
+        return { activated: false, data: [{ electoralEvent: "evento electoral no existe" }] }
+
+      const getMosaicVoteResponse = await this.getMosaicVote(electoralEventPublicAccount);
+      if (getMosaicVoteResponse)
+        return { activated: false, data: [{ electoralEvent: "evento electoral ya está activo" }] }
+
+      const elections = await nemElection.getAll(electoralEventPublicKey);
+      if (elections.length === 0)
+        return { activated: false, data: [{ electoralEvent: "evento electoral no tiene elecciones asociadas" }] }
+
+      const electoralRegister = await nemElectoralRegister.exist(electoralEventPublicKey);
+      if (!electoralRegister)
+        return { activated: false, data: [{ electoralEvent: "evento electoral no tiene registro electoral asociado" }] }
+
+      const electoralEventAddress = electoralEventPublicAccount.address;
+
+      await this.createMosaicToVote(electoralEventAddress);
+      return { activated: true, data: "electoral event activate" }
+    }
+    catch (error) {
       return { activated: false, data: error }
     }
-
-    return { activated: true, data: "electoral event activate" }
   },
 
   async isItTimeToVote(electoralEventPublicAccount: PublicAccount) {

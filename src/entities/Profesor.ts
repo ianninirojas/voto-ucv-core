@@ -2,7 +2,7 @@
 import {
   Entity,
   Column,
-  OneToOne,
+  ManyToOne,
   JoinColumn,
   PrimaryColumn
 } from "typeorm";
@@ -11,8 +11,7 @@ import {
 import {
   Length,
   IsInt,
-  IsDate,
-  IsBoolean,
+  IsNotEmpty,
   IsNumberString,
 } from "class-validator";
 
@@ -23,109 +22,32 @@ import { Persona } from '../entities/Persona';
 
 @Entity()
 export class Profesor {
-
   @PrimaryColumn()
+  @ManyToOne(type => Persona, { cascade: true })
+  @JoinColumn({ name: 'ci' })
   @IsNumberString()
   @Length(7, 8)
-  @OneToOne(type => Persona)
-  @JoinColumn()
+  @IsNotEmpty()
   ci: string;
 
   @Column()
+  @ManyToOne(type => Faculty, { cascade: true })
+  @JoinColumn({ name: 'idFacultad' })
   @IsInt()
-  @OneToOne(type => Faculty)
-  @JoinColumn()
+  @IsNotEmpty()
   idFacultad: number;
 
   @Column()
+  @ManyToOne(type => School, { cascade: true })
+  @JoinColumn({ name: 'idEscuela' })
   @IsInt()
-  @OneToOne(type => School)
-  @JoinColumn()
+  @IsNotEmpty()
   idEscuela: number;
 
   @Column()
   @IsNumberString()
   @Length(3, 3)
-  codTipoPersonal: string
-
-  @Column()
-  @IsNumberString()
-  @Length(4, 4)
-  codCategoria: string
-
-  @Column()
-  @IsNumberString()
-  @Length(3, 3)
   codStatus: string;
-
-  @Column()
-  @IsNumberString()
-  @Length(3, 3)
-  codDedicacion: string
-
-  @Column()
-  @IsNumberString()
-  @Length(2, 2)
-  codNomina: string
-
-  @Column()
-  @IsNumberString()
-  @Length(6, 6)
-  codCargo: string
-
-  @Column()
-  @IsNumberString()
-  @Length(11, 11)
-  codUnidad: string
-
-  @Column('date')
-  @IsDate()
-  fechaIngreso: Date
-
-  @Column('date')
-  @IsDate()
-  fechaAscenso: Date
-
-  @Column()
-  @IsNumberString()
-  @Length(45, 45)
-  nroOficio: string
-
-  @Column('date')
-  @IsDate()
-  fechaInicioPermiso: Date
-
-  @Column('date')
-  @IsDate()
-  fechaFinPermiso: Date
-
-  @Column('date')
-  @IsDate()
-  fechaActualizacion: Date
-
-  @Column()
-  @IsBoolean()
-  votaAu: boolean
-
-  @Column()
-  @IsBoolean()
-  votaCU: boolean
-
-  @Column()
-  @IsBoolean()
-  votaDe: boolean
-
-  @Column()
-  @IsBoolean()
-  votaCF: boolean
-
-  @Column()
-  @IsBoolean()
-  votaCE: boolean
-
-  @Column()
-  @IsInt()
-  prioridad: number
 }
 
 

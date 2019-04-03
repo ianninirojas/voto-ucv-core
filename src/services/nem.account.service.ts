@@ -9,17 +9,17 @@ import { sha3_256 } from 'js-sha3';
 export const nemAccountService = {
 
   generatePublicKey(id: string): string {
-    const publicKey = sha3_256(id).toUpperCase();
-    return publicKey;
+    const publickey = sha3_256(id).toUpperCase();
+    return publickey;
   },
 
-  getPublicAccountFromPublicKey(publicKey: string): PublicAccount {
-    return PublicAccount.createFromPublicKey(publicKey, NetworkType.MIJIN_TEST);
+  getPublicAccountFromPublicKey(publickey: string): PublicAccount {
+    return PublicAccount.createFromPublicKey(publickey, NetworkType.MIJIN_TEST);
   },
 
   getDeterministicPublicAccount(id: string): PublicAccount {
-    const publicKey = sha3_256(id).toUpperCase();
-    const publicAccount = PublicAccount.createFromPublicKey(publicKey, NetworkType.MIJIN_TEST);
+    const publickey = sha3_256(id).toUpperCase();
+    const publicAccount = PublicAccount.createFromPublicKey(publickey, NetworkType.MIJIN_TEST);
     return publicAccount;
   },
 

@@ -4,8 +4,8 @@ import {
   Entity,
   PrimaryGeneratedColumn,
   Column,
-  OneToOne,
   JoinColumn,
+  ManyToOne,
 } from "typeorm";
 
 import {
@@ -21,19 +21,19 @@ export class School {
   @PrimaryGeneratedColumn()
   id: number
 
-  @Column({unique:true})
+  @Column({ unique: true })
   @IsNotEmpty()
   name: string
 
-  @Column({unique:true})
+  @Column({ unique: true })
   @IsNumberString()
   @IsNotEmpty()
   code: string
 
   @Column()
+  @ManyToOne(type => Faculty, { cascade: true })
+  @JoinColumn({ name: 'facultyId' })
   @IsInt()
-  @OneToOne(type => Faculty)
-  @JoinColumn()
   @IsNotEmpty()
   facultyId: number;
 

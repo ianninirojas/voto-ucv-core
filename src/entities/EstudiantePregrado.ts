@@ -2,7 +2,7 @@
 import {
   Entity,
   Column,
-  OneToOne,
+  ManyToOne,
   JoinColumn,
   PrimaryColumn
 } from "typeorm";
@@ -10,8 +10,8 @@ import {
 import {
   Length,
   IsInt,
-  IsDate,
-  IsNumberString
+  IsNumberString,
+  IsNotEmpty
 } from "class-validator";
 
 // entities
@@ -22,46 +22,29 @@ import { Persona } from '../entities/Persona';
 @Entity()
 export class EstudiantePregrado {
   @PrimaryColumn()
+  @ManyToOne(type => Persona, { cascade: true })
+  @JoinColumn({ name: 'ci' })
   @IsNumberString()
   @Length(7, 8)
-  @OneToOne(type => Persona)
-  @JoinColumn()
+  @IsNotEmpty()
   ci: string;
 
   @Column()
+  @ManyToOne(type => Faculty, { cascade: true })
+  @JoinColumn({ name: 'idFacultad' })
   @IsInt()
-  @OneToOne(type => Faculty)
-  @JoinColumn()
+  @IsNotEmpty()
   idFacultad: number;
 
   @Column()
+  @ManyToOne(type => School, { cascade: true })
+  @JoinColumn({ name: 'idEscuela' })
   @IsInt()
-  @OneToOne(type => School)
-  @JoinColumn()
+  @IsNotEmpty()
   idEscuela: number;
-
-  @Column()
-  @IsInt()
-  credAprob: number;
-
-  @Column()
-  @IsInt()
-  credInscr: number;
-
-  @Column()
-  @IsInt()
-  prioridad: number;
 
   @Column()
   @IsNumberString()
   @Length(3, 3)
   codStatus: string;
-
-  @Column('date')
-  @IsDate()
-  fechaIngreso: Date;
-
-  @Column('date')
-  @IsDate()
-  fechaActualizacion: Date;
 }

@@ -17,8 +17,7 @@ class ElectionController {
       return res.status(200).send({ data: "Election successfully created" });
     }
     catch (error) {
-      console.log('error :', error);
-      return res.status(500).send({ data: error });
+      return res.status(500).send({ data: { message: 'error' } });
     }
   }
 
@@ -32,7 +31,7 @@ class ElectionController {
     }
     try {
       let elections;
-      
+
       if (electionIds.length > 0) {
         elections = await nemElection.getAll(electoralEventPublicKey, electionIds);
       }

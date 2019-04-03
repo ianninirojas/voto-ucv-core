@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, PrimaryColumn, OneToOne, JoinColumn } from "typeorm";
+import { Entity, Column, PrimaryColumn, ManyToOne, JoinColumn } from "typeorm";
 import { IsNumberString, Length, IsNotEmpty, IsInt, IsEmail } from "class-validator";
 import { School } from "../entities/School";
 import { Persona } from "../entities/Persona";
@@ -6,29 +6,26 @@ import { Faculty } from "../entities/Faculty";
 
 @Entity()
 export class ElectoralRegister {
-  @PrimaryGeneratedColumn()
-  id: number
-
   @PrimaryColumn()
+  @ManyToOne(type => Persona, { cascade: true })
+  @JoinColumn({ name: 'ci' })
   @IsNumberString()
   @Length(7, 8)
   @IsNotEmpty()
-  @OneToOne(type => Persona)
-  @JoinColumn()
   ci: string;
 
   @Column()
+  @ManyToOne(type => Faculty, { cascade: true })
+  @JoinColumn({ name: 'facultyId' })
   @IsInt()
   @IsNotEmpty()
-  @OneToOne(type => Faculty)
-  @JoinColumn()
   facultyId: number;
 
   @Column()
+  @ManyToOne(type => School, { cascade: true })
+  @JoinColumn({ name: 'schoolId' })
   @IsInt()
   @IsNotEmpty()
-  @OneToOne(type => School)
-  @JoinColumn()
   schoolId: number;
 
   @Column()

@@ -10,6 +10,7 @@ import { ElectoralEvent } from "../entities/ElectoralEvent";
 // models
 
 import { nemElectoralEvent } from "../models/nemElectoralEvent";
+import { nemElectoralRegister } from "../models/nemElectoralRegister";
 
 // services 
 
@@ -61,14 +62,14 @@ class ElectoralEventController {
   }
 
   static registerHash = async (req: Request, res: Response) => {
-    const electoralEventPublicKey = req.params.publicKey
+    const electoralEventPublicKey = req.params.publickey
 
     try {
       const electoralEventPublicAccount = nemAccountService.getPublicAccountFromPublicKey(electoralEventPublicKey);
       const transactionElectoralEvent = await nemElectoralEvent.exist(electoralEventPublicAccount);
 
       if (!transactionElectoralEvent) {
-        return res.status(400).send({ data: "Electoral event not exist" });
+        return res.status(400).send({ data: "evento electoral no existe" });
       }
 
       const hash = transactionElectoralEvent.transactionInfo.hash;
@@ -86,7 +87,7 @@ class ElectoralEventController {
   }
 
   static activate = async (req: Request, res: Response) => {
-    const electoralEventPublicKey = req.params.publicKey
+    const electoralEventPublicKey = req.params.publickey
     try {
       const response = await nemElectoralEvent.activate(electoralEventPublicKey);
       if (!response.activated) {
@@ -101,10 +102,25 @@ class ElectoralEventController {
   }
 
   static finish = async (req: Request, res: Response) => {
-    const electoralEventPublicKey = req.params.publicKey
+    const electoralEventPublicKey = req.params.publickey;
     try {
       const response = await nemElectoralEvent.finish(electoralEventPublicKey);
       if (!response.finished) {
+        return res.status(400).send({ data: response.data });
+      }
+      return res.status(200).send({ data: response.data });
+    }
+    catch (error) {
+      console.log('error :', error);
+      return res.status(400).send({ data: error });
+    }
+  }
+
+  static createElectoralRegister = async (req: Request, res: Response) => {
+    const electoralEventPublicKey = req.params.publickey;
+    try {
+      const response = await nemElectoralRegister.storeElectoralRegister(electoralEventPublicKey);
+      if (!response.created) {
         return res.status(400).send({ data: response.data });
       }
       return res.status(200).send({ data: response.data });

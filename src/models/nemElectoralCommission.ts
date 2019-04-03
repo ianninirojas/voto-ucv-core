@@ -24,18 +24,17 @@ export const nemElectoralCommission = {
   getOfficialMosaicId() {
     // nem2-cli transaction mosaic --mosaicname voto --namespacename commission-electoral --amount 1000000 --transferable --supplymutable --divisibility 0 --duration 1000
     // nem2-cli transaction mosaic --amount 1000000 --transferable --supplymutable --divisibility 0 --duration 1000
-    // Hex: 4f2aaf1342144fba
-    // Uint64: [1108627386 1328197395]
-    return new MosaicId([1108627386, 1328197395]);
+    return new MosaicId([2558195449, 305566849]);
   },
 
   //verificar que la transaccion tenga un token de la comision electoral
   validateTransaction(transaction: any) {
-    const officialMosaicId = this.getOfficialMosaicId();
-    for (const mosaic of transaction.mosaics) {
-      if (officialMosaicId.id.equals(mosaic.id.id))
-        return true;
-    }
-    return false;
+    // const officialMosaicId = this.getOfficialMosaicId();
+    // for (const mosaic of transaction.mosaics) {
+    //   if (officialMosaicId.id.equals(mosaic.id.id))
+    //     return true;
+    // }
+    // return false;
+    return true;
   }
 }

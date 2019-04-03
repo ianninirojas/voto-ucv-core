@@ -70,13 +70,4 @@ export class Persona {
   @IsPhoneNumber('VE')
   telefono: string
 
-  @Column('date')
-  @IsDate()
-  fechaNacimiento: Date
-
-  @Column('date')
-  @IsDate()
-  fechaActualizacion: Date
-
-
 }

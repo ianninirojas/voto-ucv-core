@@ -2,7 +2,7 @@
 import {
   Entity,
   Column,
-  OneToOne,
+  ManyToOne,
   JoinColumn,
   PrimaryColumn
 } from "typeorm";
@@ -24,62 +24,30 @@ import { Persona } from '../entities/Persona';
 @Entity()
 export class EgresadoPregrado {
   @PrimaryColumn()
+  @ManyToOne(type => Persona, { cascade: true })
+  @JoinColumn({ name: 'ci' })
   @IsNumberString()
   @Length(7, 8)
   @IsNotEmpty()
-  @OneToOne(type => Persona)
-  @JoinColumn()
   ci: string;
 
   @Column()
+  @ManyToOne(type => Faculty, { cascade: true })
+  @JoinColumn({ name: 'idFacultad' })
   @IsInt()
   @IsNotEmpty()
-  @OneToOne(type => Faculty)
-  @JoinColumn()
   idFacultad: number;
 
   @Column()
+  @ManyToOne(type => School, { cascade: true })
+  @JoinColumn({ name: 'idEscuela' })
   @IsInt()
   @IsNotEmpty()
-  @OneToOne(type => School)
-  @JoinColumn()
   idEscuela: number;
-
-  @Column()
-  @Length(3, 3)
-  codTitulo: string
-
-  @Column('date')
-  @IsDate()
-  fechaGrado: Date;
 
   @Column()
   @IsNumberString()
   @Length(3, 3)
   codStatus: string;
-
-  @Column()
-  @IsInt()
-  prioridad: number;
-
-  @Column('date')
-  @IsDate()
-  fechaIngreso: Date;
-
-  @Column('date')
-  @IsDate()
-  fechaActualizacion: Date;
-
-  @Column()
-  @IsBoolean()
-  votaEg: boolean;
-
-  @Column()
-  @IsBoolean()
-  votaAu: boolean;
-
-  @Column()
-  @IsBoolean()
-  votaDe: boolean;
 
 }

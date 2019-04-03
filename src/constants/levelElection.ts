@@ -1,5 +1,5 @@
-export declare enum LevelElectionEnum {
-  university = "universidad",
-  faculty = "facultad",
-  school = "escuela"
+export const LevelElectionEnum = {
+  university: "universidad",
+  faculty: "facultad",
+  school: "escuela"
 }

@@ -1,21 +1,24 @@
 // modules
 import {
   UInt64,
+  Account,
   Deadline,
   MosaicId,
   NetworkType,
-  MosaicSupplyType,
+  MosaicNonce,
   MosaicProperties,
+  MosaicSupplyType,
   MosaicDefinitionTransaction,
   MosaicSupplyChangeTransaction,
 } from "nem2-sdk";
 
 export const nemMosaicService = {
-  mosaicDefinitionTransaction(namespaceName: string, mosaicName: string, mosaicProperties: MosaicProperties) {
+  mosaicDefinitionTransaction(account: Account, mosaicProperties: MosaicProperties) {
+    const nonce = MosaicNonce.createRandom();
     return MosaicDefinitionTransaction.create(
       Deadline.create(),
-      mosaicName,
-      namespaceName,
+      nonce,
+      MosaicId.createFromNonce(nonce, account.publicAccount),
       mosaicProperties,
       NetworkType.MIJIN_TEST
     );

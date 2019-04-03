@@ -86,7 +86,7 @@ export const nemTransactionService = {
               console.error("newBlockSubscription", error);
               newBlockSubscription.unsubscribe();
               listener.terminate();
-              reject(error);
+              reject(error.status);
             }
           );
 
@@ -96,13 +96,13 @@ export const nemTransactionService = {
             console.log("status, error:" + error.status);
             newBlockSubscription.unsubscribe();
             listener.terminate();
-            reject(error);
+            reject(error.status);
           },
             error => {
               console.error(error);
               newBlockSubscription.unsubscribe();
               listener.terminate();
-              reject(error);
+              reject(error.status);
             }
           );
 
@@ -116,7 +116,7 @@ export const nemTransactionService = {
               console.error('unconfirmedAdded', error);
               newBlockSubscription.unsubscribe();
               listener.terminate();
-              reject(error);
+              reject(error.status);
             }
           );
 
@@ -142,7 +142,7 @@ export const nemTransactionService = {
               console.error('confirmed', error);
               newBlockSubscription.unsubscribe();
               listener.terminate();
-              reject(error);
+              reject(error.status);
             }
           );
       });

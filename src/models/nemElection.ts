@@ -23,6 +23,7 @@ import { Election } from "../interfaces/Election";
 
 // Constans
 import { CodeTypes } from "../constants/codeType";
+import { LevelElectionEnum } from "../constants/levelElection";
 
 export const nemElection = {
 
@@ -39,7 +40,6 @@ export const nemElection = {
       ${electionData.facultyId}
       ${electionData.schoolId}
     `);
-
     const existElectoralEventPromise = nemElectoralEvent.exist(electoralEventPublicAccount);
     const existMosaicVotePromise = nemElectoralEvent.getMosaicVote(electoralEventPublicAccount);
     const existElectionPromise = this.exist(electoralEventPublicAccount, electionId);
@@ -94,7 +94,7 @@ export const nemElection = {
           return response;
         }
         catch (error) {
-          throw new Error(error);
+          throw (error);
         }
       })
 
@@ -134,15 +134,6 @@ export const nemElection = {
       errors.push({ allowedVotes: "allowed votes must be a number" });
     }
 
-    if (!election.hasOwnProperty('facultyId')) {
-      valid = false;
-      errors.push({ facultyId: "faculty id is required" });
-    }
-    else if (election.facultyId === "") {
-      valid = false;
-      errors.push({ facultyId: "faculty id can not be empty" });
-    }
-
     if (!election.hasOwnProperty('levelElection')) {
       valid = false;
       errors.push({ levelElection: "level election is required" });
@@ -150,6 +141,38 @@ export const nemElection = {
     else if (election.levelElection === "") {
       valid = false;
       errors.push({ levelElection: "level election can not be empty" });
+
+      if (election.levelElection === LevelElectionEnum.faculty) {
+        if (!election.hasOwnProperty('facultyId')) {
+          valid = false;
+          errors.push({ facultyId: "faculty id is required" });
+        }
+        else if (election.facultyId === "") {
+          valid = false;
+          errors.push({ facultyId: "faculty id can not be empty" });
+        }
+      }
+
+      if (election.levelElection === LevelElectionEnum.school) {
+
+        if (!election.hasOwnProperty('facultyId')) {
+          valid = false;
+          errors.push({ facultyId: "faculty id is required" });
+        }
+        else if (election.facultyId === "") {
+          valid = false;
+          errors.push({ facultyId: "faculty id can not be empty" });
+        }
+
+        if (!election.hasOwnProperty('schoolId')) {
+          valid = false;
+          errors.push({ schoolId: "school id is required" });
+        }
+        else if (election.schoolId === "") {
+          valid = false;
+          errors.push({ schoolId: "school id can not be empty" });
+        }
+      }
     }
 
     if (!election.hasOwnProperty('period')) {
@@ -159,15 +182,6 @@ export const nemElection = {
     else if (election.period === "") {
       valid = false;
       errors.push({ period: "period can not be empty" });
-    }
-
-    if (!election.hasOwnProperty('schoolId')) {
-      valid = false;
-      errors.push({ schoolId: "school id is required" });
-    }
-    else if (election.schoolId === "") {
-      valid = false;
-      errors.push({ schoolId: "school id can not be empty" });
     }
 
     if (!election.hasOwnProperty('type')) {

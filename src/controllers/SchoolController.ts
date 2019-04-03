@@ -32,7 +32,7 @@ class SchoolController {
   }
 
   static create = async (req: Request, res: Response) => {
-    const facultyId = req.params.id;
+    const facultyId = req.params.facultyId;
     let faculty: Faculty;
     try {
       const facultyRepository = getRepository(Faculty);
@@ -46,7 +46,7 @@ class SchoolController {
     school.name = name;
     school.code = code;
     school.facultyId = faculty.id;
-
+    console.log('school :', school);
     const errors = await validate(school);
     if (errors.length > 0) {
       return res.status(400).send({ data: errors });
