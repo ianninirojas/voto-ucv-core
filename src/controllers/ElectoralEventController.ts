@@ -38,6 +38,17 @@ class ElectoralEventController {
     }
   }
 
+  static get = async (req: Request, res: Response) => {
+    const electoralEventPublicKey = req.params.publickey;
+    const electoralEventPublicAccount = nemAccountService.getPublicAccountFromPublicKey(electoralEventPublicKey);
+    const electoralEventTransaction = await nemElectoralEvent.exist(electoralEventPublicAccount);
+    if(!electoralEventTransaction) {
+      return res.status(400).send({ data: "Evento Electoral no existe" });
+    }
+    const electoralEvent = JSON.parse(electoralEventTransaction.message.payload).data
+    return res.status(200).send(electoralEvent);
+  }
+
   static create = async (req: Request, res: Response) => {
     const electoralEventData = req.body;
     try {

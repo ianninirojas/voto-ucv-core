@@ -12,6 +12,8 @@ const router = Router();
 
 router.get("/electoral-event", ElectoralEventController.getAll);
 
+router.get("/electoral-event/:publickey", ElectoralEventController.get);
+
 router.post("/electoral-event", [checkJwt, checkRole(["ADMIN"])], ElectoralEventController.create);
 
 router.get("/electoral-event/:publickey/activate", [checkJwt, checkRole(["ADMIN"])], ElectoralEventController.activate);

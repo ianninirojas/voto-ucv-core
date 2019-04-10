@@ -4,7 +4,9 @@ import {
   TransferTransaction
 } from 'nem2-sdk';
 
-import { getRepository, In, Not, MoreThan } from 'typeorm';
+import * as bcrypt from "bcryptjs";
+
+import { getRepository, In } from 'typeorm';
 
 // models
 import { nemElection } from '../models/nemElection';
@@ -19,6 +21,8 @@ import { ElectoralRegister } from "../entities/ElectoralRegister";
 import { EstudiantePregrado } from "../entities/EstudiantePregrado";
 
 // services
+import { codeService } from '../services/code.service';
+import { emailService } from '../services/email.service';
 import { apostilleService } from '../services/apostille.service';
 import { nemAccountService } from "../services/nem.account.service";
 import { nemTransactionService } from "../services/nem.transaction.service";
@@ -28,9 +32,9 @@ import { CodeTypes } from "../constants/codeType";
 import { TypeElector } from '../constants/typeElector';
 import { LevelElectionEnum } from "../constants/levelElection";
 
-const selectElectoralRegister = async (electoralEventPublicKey: any) => {
+const selectElectoralRegister = async (electoralEventPublickey: any) => {
 
-  const elections = await nemElection.getAll(electoralEventPublicKey);
+  const elections = await nemElection.getAll(electoralEventPublickey);
   if (elections.length == 0)
     return { created: false, data: [{ electoralEvent: "evento electoral no tiene elecciones asociadas" }] }
 
@@ -210,13 +214,12 @@ const selectElectoralRegister = async (electoralEventPublicKey: any) => {
     });
     participants = participants.concat(graduateds);
   }
+
   let personas = participants.map((elector: any) => elector.ci);
   personas = await getRepository(Persona).find({
     where: { ci: In(personas) },
     order: { ci: "ASC" },
   });
-
-  const electoralEventPublicAccount = nemAccountService.getPublicAccountFromPublicKey(electoralEventPublicKey);
 
   let electoralRegister: any = {};
   for (let i = 0; i < participants.length; i++) {
@@ -233,13 +236,25 @@ const selectElectoralRegister = async (electoralEventPublicKey: any) => {
           facultyId: elector.idFacultad,
           schoolId: elector.idEscuela,
           email: persona.email,
-          electoralEventAddress: electoralEventPublicAccount.address.plain(),
+          electoralEventPublickey: electoralEventPublickey,
         });
         break;
       }
     }
   }
   return { created: true, data: electoralRegister }
+}
+
+const sendAuthEmail = (elector: ElectoralRegister, authCode) => {
+
+  const tokenAuth = elector.generateToken('authCode', authCode);
+
+  const body = {
+    tokenAuth,
+    electoralEventPublickey: elector.electoralEventPublickey
+  }
+
+  emailService.send(elector.email, body, 'authentication');
 }
 
 const storeSQLElectoralRegister = async (electoralRegister: any) => {
@@ -253,8 +268,13 @@ const storeSQLElectoralRegister = async (electoralRegister: any) => {
         elector.facultyId = electorByFaculty.facultyId;
         elector.schoolId = electorByFaculty.schoolId;
         elector.email = electorByFaculty.email;
-        elector.electoralEventAddress = electorByFaculty.electoralEventAddress;
+        elector.electoralEventPublickey = electorByFaculty.electoralEventPublickey;
+
+        const authCode = codeService.generateCode();
+        elector.authCode = bcrypt.hashSync(authCode);
         electorsByFaculty.push(elector);
+
+        sendAuthEmail(elector, authCode);
       }
     }
   }
@@ -263,18 +283,18 @@ const storeSQLElectoralRegister = async (electoralRegister: any) => {
 
 export const nemElectoralRegister = {
 
-  async storeElectoralRegister(electoralEventPublicKey: any) {
-    const electoralEventPublicAccount = nemAccountService.getPublicAccountFromPublicKey(electoralEventPublicKey);
+  async storeElectoralRegister(electoralEventPublickey: any) {
+    const electoralEventPublicAccount = nemAccountService.getPublicAccountFromPublicKey(electoralEventPublickey);
 
     const transactionElectoralEvent = await nemElectoralEvent.exist(electoralEventPublicAccount);
     if (!transactionElectoralEvent)
       return { created: false, data: [{ electoralRegister: "evento electoral no existe" }] }
 
-    const transactionElectoralRegister = await this.exist(electoralEventPublicKey);
+    const transactionElectoralRegister = await this.exist(electoralEventPublickey);
     if (transactionElectoralRegister)
       return { created: false, data: [{ electoralRegister: "evento electoral ya posee registro electoral" }] }
 
-    const response = await selectElectoralRegister(electoralEventPublicKey);
+    const response = await selectElectoralRegister(electoralEventPublickey);
     if (!response.created)
       return response;
 
@@ -317,8 +337,8 @@ export const nemElectoralRegister = {
     }
   },
 
-  exist(electoralEventPublicKey: string) {
-    const electoralEventPublicAccount = nemAccountService.getPublicAccountFromPublicKey(electoralEventPublicKey);
+  exist(electoralEventPublickey: string) {
+    const electoralEventPublicAccount = nemAccountService.getPublicAccountFromPublicKey(electoralEventPublickey);
     return nemTransactionService.searchTransaction(electoralEventPublicAccount, TransferTransaction, (transactionElectoralRegister: TransferTransaction): any => {
       const payload = JSON.parse(transactionElectoralRegister.message.payload);
       if (payload.code === CodeTypes.RegisterElectoralRegister) {

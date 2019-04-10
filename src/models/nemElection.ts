@@ -290,22 +290,25 @@ export const nemElection = {
     const electoralEventPublicAccount = nemAccountService.getPublicAccountFromPublicKey(electoralEventPublicKey);
     return nemTransactionService.searchTransactions(electoralEventPublicAccount, AggregateTransaction,
       (transactionElectionCreate: any): any => {
+        console.log('transactionElectionCreate :', transactionElectionCreate);
         for (const innerTransaction of transactionElectionCreate.innerTransactions) {
-          const payload = JSON.parse(innerTransaction.message.payload);
-          if (payload.code === CodeTypes.CreateElection) {
-            if (electionsIds) {
-              if (electionsIds.find(id => id === payload.data.id)) {
+          if (innerTransaction instanceof TransferTransaction) {
+            const payload = JSON.parse(innerTransaction.message.payload);
+            if (payload.code === CodeTypes.CreateElection) {
+              if (electionsIds) {
+                if (electionsIds.find(id => id === payload.data.id)) {
+                  const candidates = nemCandidate.getCandidates(transactionElectionCreate);
+                  let election = payload.data;
+                  election['candidates'] = candidates;
+                  return election;
+                }
+              }
+              else {
                 const candidates = nemCandidate.getCandidates(transactionElectionCreate);
                 let election = payload.data;
                 election['candidates'] = candidates;
                 return election;
               }
-            }
-            else {
-              const candidates = nemCandidate.getCandidates(transactionElectionCreate);
-              let election = payload.data;
-              election['candidates'] = candidates;
-              return election;
             }
           }
         }

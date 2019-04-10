@@ -46,7 +46,6 @@ class SchoolController {
     school.name = name;
     school.code = code;
     school.facultyId = faculty.id;
-    console.log('school :', school);
     const errors = await validate(school);
     if (errors.length > 0) {
       return res.status(400).send({ data: errors });
