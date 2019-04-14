@@ -35,11 +35,12 @@ export const nemElection = {
     const electoralEventPublicAccount = nemAccountService.getPublicAccountFromPublicKey(electoralEventPublicKey);
 
     const electionId = this.generateElectionId(`
-      ${electoralEventPublicAccount.address.plain()}
+      ${electoralEventPublicKey}
       ${electionData.type}
       ${electionData.facultyId}
       ${electionData.schoolId}
     `);
+
     const existElectoralEventPromise = nemElectoralEvent.exist(electoralEventPublicAccount);
     const existMosaicVotePromise = nemElectoralEvent.getMosaicVote(electoralEventPublicAccount);
     const existElectionPromise = this.exist(electoralEventPublicAccount, electionId);
@@ -77,11 +78,9 @@ export const nemElection = {
           const electoralCommissionPrivateKey = nemElectoralCommission.getElectoralCommissionPrivateKey()
           const electoralCommissionAccount = nemAccountService.getAccountFromPrivateKey(electoralCommissionPrivateKey);
 
-          const mosaicsToValidateTransaction = [new Mosaic(nemElectoralCommission.getOfficialMosaicId(), UInt64.fromUint(1))];
+          const electoralEventCreateTransferTransaction = nemTransactionService.transferTransaction(electoralEventAddress, [], message).toAggregate(electoralCommissionAccount.publicAccount);
 
-          const electoralEventCreateTransferTransaction = nemTransactionService.transferTransaction(electoralEventAddress, mosaicsToValidateTransaction, message).toAggregate(electoralCommissionAccount.publicAccount);
-
-          let registerCandidatesTransactions = nemCandidate.registerCandidatesTransactions(electionData.candidates, electoralEventAddress, mosaicsToValidateTransaction, electoralCommissionAccount.publicAccount);
+          let registerCandidatesTransactions = nemCandidate.registerCandidatesTransactions(electionData.candidates, electoralEventAddress, [], electoralCommissionAccount.publicAccount);
 
           const innerTransactions = [...registerCandidatesTransactions, electoralEventCreateTransferTransaction]
           const electoralEventCreateAggregateTransaction = nemTransactionService.aggregateTransaction(innerTransactions, []);
@@ -290,24 +289,25 @@ export const nemElection = {
     const electoralEventPublicAccount = nemAccountService.getPublicAccountFromPublicKey(electoralEventPublicKey);
     return nemTransactionService.searchTransactions(electoralEventPublicAccount, AggregateTransaction,
       (transactionElectionCreate: any): any => {
-        console.log('transactionElectionCreate :', transactionElectionCreate);
         for (const innerTransaction of transactionElectionCreate.innerTransactions) {
           if (innerTransaction instanceof TransferTransaction) {
             const payload = JSON.parse(innerTransaction.message.payload);
             if (payload.code === CodeTypes.CreateElection) {
-              if (electionsIds) {
-                if (electionsIds.find(id => id === payload.data.id)) {
+              if (nemElectoralCommission.validateTransaction(innerTransaction)) {
+                if (electionsIds) {
+                  if (electionsIds.find(id => id === payload.data.id)) {
+                    const candidates = nemCandidate.getCandidates(transactionElectionCreate);
+                    let election = payload.data;
+                    election['candidates'] = candidates;
+                    return election;
+                  }
+                }
+                else {
                   const candidates = nemCandidate.getCandidates(transactionElectionCreate);
                   let election = payload.data;
                   election['candidates'] = candidates;
                   return election;
                 }
-              }
-              else {
-                const candidates = nemCandidate.getCandidates(transactionElectionCreate);
-                let election = payload.data;
-                election['candidates'] = candidates;
-                return election;
               }
             }
           }

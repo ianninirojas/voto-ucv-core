@@ -33,7 +33,7 @@ import { CodeTypes } from "../constants/codeType";
 // 6. Enviar voto a la direccion del candidato
 // 7. Registrar voter en blockchain
 
-export const votingService = {
+export const voteService = {
 
   calculateVoteFee(mosaics: any, numberVotes: any) {
     const electoralCommissionPrivateKey = nemElectoralCommission.getElectoralCommissionPrivateKey()
@@ -106,7 +106,7 @@ export const votingService = {
   },
 
   // 6. Enviar voto a la direccion del candidato
-  async sendVotesToCandidates(candidates: any[], voterAccount: Account, mosaicVote: any, ) {
+  async sendVotesToCandidates(candidates: any[], voterAccount: Account, electoralCommissionAccount: Account, mosaicVote: any, ) {
     const innerTransactionCandidateVote = candidates.map((candidate: any) => {
       const candidatePublicAccount = nemAccountService.getDeterministicPublicAccount(`${candidate.ci} - ${candidate.electionId}`);
       const candidateVoteTransferTransaction = nemTransactionService.transferTransaction(candidatePublicAccount.address, [mosaicVote], "");
@@ -114,15 +114,14 @@ export const votingService = {
     });
 
     const candidatesVoteAggregateTransaction = nemTransactionService.aggregateTransaction(innerTransactionCandidateVote, []);
-    const candidatesVoteSignedTransaction = nemTransactionService.signTransaction(voterAccount, candidatesVoteAggregateTransaction);
-    const candidatesVoteAnnounceTransactionResponse = await nemTransactionService.announceTransaction(candidatesVoteSignedTransaction);
-
-    if (candidatesVoteAnnounceTransactionResponse.message !== 'ok') {
-      return 'error';
+    const cosignatories: Account[] = [electoralCommissionAccount];
+    const candidatesVoteSignedTransaction = nemTransactionService.signTransactionWithCosignatories(voterAccount, cosignatories, candidatesVoteAggregateTransaction);
+    try {
+      await nemTransactionService.announceTransaction(candidatesVoteSignedTransaction);
+      await nemTransactionService.awaitTransactionConfirmed(voterAccount.address, candidatesVoteSignedTransaction)
     }
-    const candidatesVoteAwaitTransactionConfirmed = await nemTransactionService.awaitTransactionConfirmed(voterAccount.address, candidatesVoteSignedTransaction)
-    if (!candidatesVoteAwaitTransactionConfirmed) {
-      return 'error';
+    catch (error) {
+      throw (error);
     }
   },
 
@@ -178,7 +177,7 @@ export const votingService = {
     let mosaicFee = null;
     mosaicFee = [{ mosaicId: mosaicIdVote, quantity: 1 }];
     const fee = await this.calculateVoteFee(mosaicFee, numberVotes);
-    mosaicFee = NetworkCurrencyMosaic.createRelative(fee);    
+    mosaicFee = NetworkCurrencyMosaic.createRelative(fee);
 
     // PASO 5
     const voterAccount = Account.generateNewAccount(NetworkType.MIJIN_TEST);
@@ -188,7 +187,7 @@ export const votingService = {
     await this.sendVoteFeeToVoter(mosaicsVoter, voterAccount.address, electoralCommissionAccount);
 
     //  PASO 6
-    await this.sendVotesToCandidates(candidates, voterAccount, mosaicVote);
+    await this.sendVotesToCandidates(candidates, voterAccount, electoralCommissionAccount, mosaicVote);
 
     // PASO 7
     this.registerVoter(ciVoter, electoralCommissionAccount, voterAccount);

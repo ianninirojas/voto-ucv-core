@@ -53,6 +53,10 @@ export const nemTransactionService = {
     return signer.sign(transaction);
   },
 
+  signTransactionWithCosignatories(signer: Account, cosignatures: Account[], transaction: AggregateTransaction) {
+    return signer.signTransactionWithCosignatories(transaction, cosignatures)
+  },
+
   announceTransaction(signedTransaction: SignedTransaction) {
     const transactionHttp = new TransactionHttp('http://127.0.0.1:3000');
     return transactionHttp.announce(signedTransaction).toPromise();
@@ -82,7 +86,7 @@ export const nemTransactionService = {
             block => {
               console.log("New block created:" + block.height.compact());
             },
-            error => {              
+            error => {
               console.error("newBlockSubscription", error);
               newBlockSubscription.unsubscribe();
               listener.terminate();
@@ -151,7 +155,8 @@ export const nemTransactionService = {
 
   async searchTransaction(publicAccount: PublicAccount, typeTransaction: any, check: (tx: any) => any) {
     let lastId = undefined;
-    let transactions = await nemTransactionService.getTransactions(publicAccount, 100, lastId).catch(error => { throw new Error(error) });
+    let transactions = await nemTransactionService.getTransactions(publicAccount, 50, lastId).catch(error => { throw (error) });
+    console.log('transactions :', transactions);
     while (transactions.length !== 0) {
       for (const transaction of transactions) {
         if (transaction instanceof typeTransaction) {
@@ -164,7 +169,7 @@ export const nemTransactionService = {
       if (lastTransaction) {
         if (lastTransaction.transactionInfo) {
           lastId = lastTransaction.transactionInfo.id
-          transactions = await nemTransactionService.getTransactions(publicAccount, 100, lastId);
+          transactions = await nemTransactionService.getTransactions(publicAccount, 50, lastId);
         }
       }
     }

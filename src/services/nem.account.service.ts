@@ -23,6 +23,11 @@ export const nemAccountService = {
     return publicAccount;
   },
 
+  generatePrivateKey(id: string): string {
+    const privateKey = sha3_256(id).toUpperCase();
+    return privateKey;
+  },
+
   getAccountFromPrivateKey(privateKey: string): Account {
     const networkType = NetworkType.MIJIN_TEST;
     return Account.createFromPrivateKey(privateKey, networkType);

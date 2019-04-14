@@ -314,8 +314,6 @@ export const nemElectoralRegister = {
 
     const electoralEventAddress = electoralEventPublicAccount.address;
 
-    const mosaicsToValidateTransaction = [new Mosaic(nemElectoralCommission.getOfficialMosaicId(), UInt64.fromUint(1))];
-
     const message = JSON.stringify({
       code: CodeTypes.RegisterElectoralRegister,
       data: {
@@ -323,7 +321,7 @@ export const nemElectoralRegister = {
       }
     });
 
-    const electoralRegisterTransferTransaction = nemTransactionService.transferTransaction(electoralEventAddress, mosaicsToValidateTransaction, message);
+    const electoralRegisterTransferTransaction = nemTransactionService.transferTransaction(electoralEventAddress, [], message);
     const electoralRegisterSignedTransaction = nemTransactionService.signTransaction(electoralCommissionAccount, electoralRegisterTransferTransaction);
     try {
       await nemTransactionService.announceTransaction(electoralRegisterSignedTransaction);
@@ -345,11 +343,6 @@ export const nemElectoralRegister = {
         if (nemElectoralCommission.validateTransaction(transactionElectoralRegister)) {
           return transactionElectoralRegister
         }
-        else
-          return false;
-      }
-      else {
-        return false;
       }
     });
   },

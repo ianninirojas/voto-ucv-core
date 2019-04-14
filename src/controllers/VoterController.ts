@@ -10,6 +10,9 @@ import config from '../config/config';
 import { ElectoralRegister } from "../entities/ElectoralRegister";
 import { codeService } from "../services/code.service";
 import { emailService } from "../services/email.service";
+import { nemElectoralEvent } from "../models/nemElectoralEvent";
+import { nemVoter } from "../models/nemVoter";
+import { triggerAsyncId } from "async_hooks";
 
 // CI:      : 10509480
 // authCode : 4fb12d9e9c4dcda3
@@ -225,9 +228,21 @@ class VoterController {
     if (!elector.checkIfUnencryptedPasswordIsValid(password)) {
       return res.status(404).send({ data: 'Contraseña no coincide con la registrada' });
     }
-    
 
-    return res.status(200).send();
+    const seed = { electoralEventPublickey, password, identityDocument, accessCode }
+
+    const voterAccount = nemVoter.getAccount(seed);
+
+    try {
+      const response = await nemVoter.vote(voterAccount, electoralEventPublickey, elections);
+      if (!response.voted) {
+        return res.status(400).send({ data: response.data });
+      }
+      return res.status(200).send();
+    }
+    catch (error) {
+      return res.status(400).send({ data: error });
+    }
   }
 }
 

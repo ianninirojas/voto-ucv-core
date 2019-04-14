@@ -32,5 +32,5 @@ export const nemMosaicService = {
       delta,
       NetworkType.MIJIN_TEST
     );
-  },
+  }
 }

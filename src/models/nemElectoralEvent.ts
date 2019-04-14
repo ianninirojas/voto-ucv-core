@@ -36,34 +36,33 @@ export const nemElectoralEvent = {
         for (const innerTransaction of transactionMosaicVoteCreate.innerTransactions) {
           if (innerTransaction instanceof TransferTransaction) {
             const payload = JSON.parse(innerTransaction.message.payload);
-            if (payload.code === CodeTypes.CreateMosaicVote)
-              return payload.data;
-            else
-              return false;
+            if (payload.code === CodeTypes.CreateMosaicVote) {
+              if (nemElectoralCommission.validateTransaction(innerTransaction)) {
+                return payload.data;
+              }
+            }
           }
         }
+        return false;
       });
   },
 
-  async createMosaicToVote(eventElectoralAddress: Address, mosaicName: string) {
+  async createMosaicToVote(eventElectoralAddress: Address) {
     try {
       const electoralCommissionPrivateKey = nemElectoralCommission.getElectoralCommissionPrivateKey()
       const electoralCommissionAccount = nemAccountService.getAccountFromPrivateKey(electoralCommissionPrivateKey);
-      const electoralCommissionNamespace = nemElectoralCommission.getElectoralCommissionNamespace();
 
       const mosaicProperties = MosaicProperties.create({
         supplyMutable: true,
         transferable: true,
         levyMutable: false,
         divisibility: 0,
-        duration: UInt64.fromUint(1000),
       });
 
       const mosaicDefinitionTransaction = nemMosaicService.mosaicDefinitionTransaction(electoralCommissionAccount, mosaicProperties);
 
       const mosaicSupplyChangeTransaction = nemMosaicService.mosaicSupplyChangeTransaction(mosaicDefinitionTransaction.mosaicId, MosaicSupplyType.Increase, UInt64.fromUint(1))
 
-      const mosaicsToValidateTransaction = [new Mosaic(nemElectoralCommission.getOfficialMosaicId(), UInt64.fromUint(1))];
 
       let message = JSON.stringify({
         code: CodeTypes.CreateMosaicVote,
@@ -72,7 +71,7 @@ export const nemElectoralEvent = {
         }
       })
 
-      const saveMosaicIdTransferTransaction = nemTransactionService.transferTransaction(eventElectoralAddress, mosaicsToValidateTransaction, message);
+      const saveMosaicIdTransferTransaction = nemTransactionService.transferTransaction(eventElectoralAddress, [], message);
 
       const innerTransactions = [
         mosaicDefinitionTransaction.toAggregate(electoralCommissionAccount.publicAccount),
@@ -93,13 +92,17 @@ export const nemElectoralEvent = {
   },
 
   finished(electoralEventPublicAccount: any) {
-    return nemTransactionService.searchTransaction(electoralEventPublicAccount, TransferTransaction, (transactionElectoralEvent: TransferTransaction): any => {
-      const payload = JSON.parse(transactionElectoralEvent.message.payload);
-      if (payload.code === CodeTypes.FinishElectoralEvent)
-        return transactionElectoralEvent;
-      else
+    return nemTransactionService.searchTransaction(electoralEventPublicAccount, TransferTransaction,
+      (transactionElectoralEvent: TransferTransaction): any => {
+        const payload = JSON.parse(transactionElectoralEvent.message.payload);
+        if (payload.code === CodeTypes.FinishElectoralEvent) {
+          if (nemElectoralCommission.validateTransaction(transactionElectoralEvent)) {
+            return transactionElectoralEvent;
+          }
+        }
+
         return false
-    });
+      });
   },
 
   async finish(electoralEventPublicKey: string) {
@@ -128,9 +131,8 @@ export const nemElectoralEvent = {
 
       const electoralEventAddress = electoralEventPublicAccount.address;
 
-      const mosaicsToValidateTransaction = [new Mosaic(nemElectoralCommission.getOfficialMosaicId(), UInt64.fromUint(1))];
 
-      const electoralEventFinishTransferTransaction = nemTransactionService.transferTransaction(electoralEventAddress, mosaicsToValidateTransaction, message);
+      const electoralEventFinishTransferTransaction = nemTransactionService.transferTransaction(electoralEventAddress, [], message);
       const electoralEventFinishSignedTransaction = nemTransactionService.signTransaction(electoralCommissionAccount, electoralEventFinishTransferTransaction);
 
       await nemTransactionService.announceTransaction(electoralEventFinishSignedTransaction);
@@ -172,12 +174,13 @@ export const nemElectoralEvent = {
     }
   },
 
-  async isItTimeToVote(electoralEventPublicAccount: PublicAccount) {
+  async isItTimeToVote(electoralEventPublicKey: string) {
+    const electoralEventPublicAccount = nemAccountService.getPublicAccountFromPublicKey(electoralEventPublicKey);
     let getMosaicVotePromise = this.getMosaicVote(electoralEventPublicAccount);
     let finalizedElectionPromise = this.finished(electoralEventPublicAccount);
     return Promise.all([getMosaicVotePromise, finalizedElectionPromise])
       .then(([getMosaicVote, finalizedElection]) => {
-        return finalizedElection && getMosaicVote;
+        return !finalizedElection && getMosaicVote;
       })
       .catch(reason => {
         return reason;
@@ -223,19 +226,16 @@ export const nemElectoralEvent = {
   },
 
   exist(electoralEventPublicAccount: PublicAccount) {
-    return nemTransactionService.searchTransaction(electoralEventPublicAccount, TransferTransaction, (transactionElectoralEvent: TransferTransaction): any => {
-      const payload = JSON.parse(transactionElectoralEvent.message.payload);
-      if (payload.code === CodeTypes.CreateElectoralEvent) {
-        if (nemElectoralCommission.validateTransaction(transactionElectoralEvent)) {
-          return transactionElectoralEvent
+    return nemTransactionService.searchTransaction(electoralEventPublicAccount, TransferTransaction,
+      (transactionElectoralEvent: TransferTransaction): any => {
+        const payload = JSON.parse(transactionElectoralEvent.message.payload);
+        if (payload.code === CodeTypes.CreateElectoralEvent) {
+          if (nemElectoralCommission.validateTransaction(transactionElectoralEvent)) {
+            return transactionElectoralEvent;
+          }
         }
-        else
-          return false;
-      }
-      else {
         return false;
-      }
-    });
+      });
   },
 
   validData(electoralEvent: ElectoralEvent) {
@@ -329,8 +329,7 @@ export const nemElectoralEvent = {
       const electoralCommissionAccount = nemAccountService.getAccountFromPrivateKey(electoralCommissionPrivateKey);
       const electoralEventAddress = electoralEventPublicAccount.address;
 
-      const mosaicsToValidateTransaction = [new Mosaic(nemElectoralCommission.getOfficialMosaicId(), UInt64.fromUint(1))];
-      const electoralEventCreateTransferTransaction = nemTransactionService.transferTransaction(electoralEventAddress, mosaicsToValidateTransaction, message);
+      const electoralEventCreateTransferTransaction = nemTransactionService.transferTransaction(electoralEventAddress, [], message);
       const electoralEventCreateSignedTransaction = nemTransactionService.signTransaction(electoralCommissionAccount, electoralEventCreateTransferTransaction);
       await nemTransactionService.announceTransaction(electoralEventCreateSignedTransaction);
 
