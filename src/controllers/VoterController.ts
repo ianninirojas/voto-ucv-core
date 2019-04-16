@@ -12,28 +12,22 @@ import { codeService } from "../services/code.service";
 import { emailService } from "../services/email.service";
 import { nemElectoralEvent } from "../models/nemElectoralEvent";
 import { nemVoter } from "../models/nemVoter";
-import { triggerAsyncId } from "async_hooks";
 
-// CI:      : 10509480
-// authCode : 4fb12d9e9c4dcda3
-// encryp   : $2a$10$YV6DMnEctbpI2B6EbLEqAerhtkLlcTuijB6sqM.l71eyDnuHLyOj6
+// 27562580
+// e6b5fe033412c84d
+// tokenAuth : eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZGVudGl0eURvY3VtZW50IjoiMjc1NjI1ODAiLCJhdXRoQ29kZSI6ImU2YjVmZTAzMzQxMmM4NGQiLCJpYXQiOjE1NTUzNjgyNjUsImV4cCI6MTU1NTQ1NDY2NX0.SuPn7HczGDP37tB1FuAhHZnEtyF3LLlqvbNH_bMF3uw
 
-// CI:      : 22159058
-// authCode : ba57d90264f272eb
-// encryp   : $2a$10$MAsvQbBlDTYKeEqMYkkLueJGc6d8fapprcs4QIIYAndLkPbjitIHK
+// 39733171
+// 03a9171dd2f38ee7
+// tokenAuth : eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZGVudGl0eURvY3VtZW50IjoiMzk3MzMxNzEiLCJhdXRoQ29kZSI6IjAzYTkxNzFkZDJmMzhlZTciLCJpYXQiOjE1NTUzNjgyNjUsImV4cCI6MTU1NTQ1NDY2NX0.LfPBGADdzgz2maVDH_LxZTaj0_X0gpDaIONRoS0Qhdc
 
-// CI:      : 24114892
-// authCode : d93becb9c6581f24
-// encryp   : $2a$10$u8aMJuwkl3iHQhAOziaxPOSsoOAvrm4V8eaxHOKdzSDaf11ksDwm2
+// 42865291
+// b0c7ac0dd7fbe5e6
+// tokenAuth : eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZGVudGl0eURvY3VtZW50IjoiNDI4NjUyOTEiLCJhdXRoQ29kZSI6ImIwYzdhYzBkZDdmYmU1ZTYiLCJpYXQiOjE1NTUzNjgyNjUsImV4cCI6MTU1NTQ1NDY2NX0.KmP03BN5fo5rlPpKP71Ksj6OZLdef58gJKyYORmat6k
 
-// CI:          : 44407478
-// authCode     : d9ebd4395a20a49a
-// EauthCode    : $2a$10$5sXSRdE8hRO5yxQFOIsAOetQ5rUpIsZUzhpBGZSYm/MUy5Zd4acCO
-// tokenAuth    : iOjE1NTQ1ODA1ODR9.sE7B4EmYL0wN6SN_35G05P8jg0vfUxRF_hxpZBv-aXM
-// http://localhost:3003/eventos-electorales/C07F2D2B289AA22C45D2881F0096257AE766588081EA3DE19DEDE192338AFA3E/autenticacion/iOjE1NTQ1ODA1ODR9.sE7B4EmYL0wN6SN_35G05P8jg0vfUxRF_hxpZBv-aXM
-// accessCode   : f2791cbc27fed6f5
-// EaccessCode  : $2a$10$1MRotHBB/Md3/NTsnAvtj.6iRuaatf/tMOXK2m/Qoae0nMH3SzY/O
-// tokenAccess    : eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZGVudGl0eURvY3VtZW50Ijo0NDQwNzQ3OCwiYWNjZXNzQ29kZSI6ImYyNzkxY2JjMjdmZWQ2ZjUiLCJpYXQiOjE1NTQ2NTAzNjYsImV4cCI6MTU1NDkwOTU2Nn0.t3mjpZHFRvYpEo8q5uRnyeLnIKkGsQiVr7Dertktz-I
+// 22099912
+// 939f6df564de3e9c
+// tokenAuth : eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZGVudGl0eURvY3VtZW50IjoiMjIwOTk5MTIiLCJhdXRoQ29kZSI6IjkzOWY2ZGY1NjRkZTNlOWMiLCJpYXQiOjE1NTUzNjgyNjUsImV4cCI6MTU1NTQ1NDY2NX0.ZqPwOgTJ9jLkrNIo8jxeUNSQflzXQwLlY0Hwqhk86eM
 
 class VoterController {
   static auth = async (req: Request, res: Response) => {
@@ -81,7 +75,8 @@ class VoterController {
         electoralEventPublickey: elector.electoralEventPublickey
       }
       electoralRegisterRepository.save(elector)
-      emailService.send(elector.email, body, 'authorization');
+      const subject = 'Autorización Evento Electoral';
+      emailService.send(elector.email, subject, body, 'authorization');
     }
 
     return res.status(200).send({ data: 'Autenticado' });

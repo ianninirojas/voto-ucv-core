@@ -52,6 +52,10 @@ export class ElectoralRegister {
 
   @Column()
   @IsNotEmpty()
+  type: string
+
+  @Column()
+  @IsNotEmpty()
   authCode: string
 
   @Column()

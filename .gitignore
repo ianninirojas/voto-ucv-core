@@ -1,4 +1,3 @@
-
 # Created by https://www.gitignore.io/api/node,xcode,macos,linux,bower,windows,webstorm,sublimetext,webstorm+iml,webstorm+all,visualstudio,androidstudio,xcodeinjection,visualstudiocode
 
 ### AndroidStudio ###
@@ -208,11 +207,6 @@ build/Release
 # Dependency directories
 node_modules/
 jspm_packages/
-
-# ormconfig
-ormconfig.json
-
-#
 
 # Typescript v1 declaration files
 typings/

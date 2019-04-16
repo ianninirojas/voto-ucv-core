@@ -58,17 +58,17 @@ export const nemTransactionService = {
   },
 
   announceTransaction(signedTransaction: SignedTransaction) {
-    const transactionHttp = new TransactionHttp('http://127.0.0.1:3000');
+    const transactionHttp = new TransactionHttp('http://54.178.241.129:3000');
     return transactionHttp.announce(signedTransaction).toPromise();
   },
 
   getTransaction(hashTransaction: string) {
-    const transactionHttp = new TransactionHttp('http://127.0.0.1:3000');
+    const transactionHttp = new TransactionHttp('http://54.178.241.129:3000');
     return transactionHttp.getTransaction(hashTransaction).toPromise();
   },
 
   getTransactions(publicAccount: PublicAccount, pageSize: number, id: string | undefined) {
-    const accountHttp = new AccountHttp('http://127.0.0.1:3000');
+    const accountHttp = new AccountHttp('http://54.178.241.129:3000');
     const queryParam = new QueryParams(pageSize, id);
     return accountHttp.transactions(publicAccount, queryParam).toPromise();
   },
@@ -156,7 +156,6 @@ export const nemTransactionService = {
   async searchTransaction(publicAccount: PublicAccount, typeTransaction: any, check: (tx: any) => any) {
     let lastId = undefined;
     let transactions = await nemTransactionService.getTransactions(publicAccount, 50, lastId).catch(error => { throw (error) });
-    console.log('transactions :', transactions);
     while (transactions.length !== 0) {
       for (const transaction of transactions) {
         if (transaction instanceof typeTransaction) {

@@ -39,7 +39,7 @@ export const nemVoter = {
   },
 
   async getMosaicToVoteQuantity(address: Address, electoralEventPublickey: string) {
-    const url = 'http://localhost:3000';
+    const url = 'http://54.178.241.129:3000';
     const accountHttp = new AccountHttp(url);
     const infoAccount = await accountHttp.getAccountInfo(address).toPromise();
     const electoralEventPublicAccount = nemAccountService.getPublicAccountFromPublicKey(electoralEventPublickey);
