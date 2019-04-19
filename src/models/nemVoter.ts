@@ -8,7 +8,9 @@ import {
   TransferTransaction,
   AccountHttp,
   MosaicSupplyType,
-  NetworkCurrencyMosaic
+  NetworkCurrencyMosaic,
+  MosaicId,
+  AggregateTransaction
 } from 'nem2-sdk';
 
 //Models
@@ -38,13 +40,18 @@ export const nemVoter = {
     return nemAccountService.getAccountFromPrivateKey(privateKey);
   },
 
-  async getMosaicToVoteQuantity(address: Address, electoralEventPublickey: string) {
+  calculateVoteFee(mosaics: any, numberVotes: any) {
+    const electoralCommissionPrivateKey = nemElectoralCommission.getElectoralCommissionPrivateKey()
+    const electoralCommissionAccount = nemAccountService.getAccountFromPrivateKey(electoralCommissionPrivateKey);
+    const tx = nemTransactionService.transferTransaction(electoralCommissionAccount.address, mosaics, "");
+    return tx.maxFee.compact() * numberVotes;
+  },
+
+  async getMosaicToVoteQuantity(address: Address, mosaicIdToVote: MosaicId) {
     const url = 'http://54.178.241.129:3000';
     const accountHttp = new AccountHttp(url);
     const infoAccount = await accountHttp.getAccountInfo(address).toPromise();
-    const electoralEventPublicAccount = nemAccountService.getPublicAccountFromPublicKey(electoralEventPublickey);
-    const mosaicToVote = await nemElectoralEvent.getMosaicVote(electoralEventPublicAccount)
-    const mosaic = infoAccount.mosaics.find(mosaic => mosaic.id.equals(mosaicToVote.mosaicId));
+    const mosaic = infoAccount.mosaics.find(mosaic => mosaic.id.equals(mosaicIdToVote));
     if (mosaic) {
       return mosaic.amount.compact();
     }
@@ -53,26 +60,30 @@ export const nemVoter = {
     }
   },
 
-  calculateVoteFee(mosaics: any, numberVotes: any) {
-    const electoralCommissionPrivateKey = nemElectoralCommission.getElectoralCommissionPrivateKey()
-    const electoralCommissionAccount = nemAccountService.getAccountFromPrivateKey(electoralCommissionPrivateKey);
-    const tx = nemTransactionService.transferTransaction(electoralCommissionAccount.address, mosaics, "");
-    return tx.maxFee.compact() * numberVotes;
+  voterHaveMosaic(voterAccount: Account) {
+    return nemTransactionService.searchTransaction(voterAccount.publicAccount, TransferTransaction,
+      (transactionMosaicToVote: TransferTransaction): boolean => {
+        if (nemElectoralCommission.validateTransaction(transactionMosaicToVote)) {
+          const payload = JSON.parse(transactionMosaicToVote.message.payload);
+          if (transactionMosaicToVote.recipient.equals(voterAccount.address)) {
+            if (payload.code === CodeTypes.TransferMosaicToVote) {
+              return true;
+            }
+          }
+        }
+        return false;
+      });
   },
 
   // 2. Verificar que el voter no haya votado
-  async alreadyVoted(voterAccount: Account, electoralEventPublickey: string) {
-    return nemTransactionService.searchTransaction(voterAccount.publicAccount, TransferTransaction,
-      async (transactionMosaicToVote: TransferTransaction): Promise<any> => {
-        if (nemElectoralCommission.validateTransaction(transactionMosaicToVote)) {
-          const payload = JSON.parse(transactionMosaicToVote.message.payload);
-          if (transactionMosaicToVote.recipient instanceof Address) {
-            if (transactionMosaicToVote.recipient.equals(voterAccount.address)) {
-              if (payload.code === CodeTypes.TransferMosaicToVote) {
-                if (!this.getMosaicToVoteQuantity(voterAccount.address, electoralEventPublickey)) {
-                  return true
-                }
-              }
+  alreadyVoted(voterPublicAccount: PublicAccount) {
+    return nemTransactionService.searchTransaction(voterPublicAccount, AggregateTransaction,
+      (voteTransaction: any): any => {
+        for (const innerTransaction of voteTransaction.innerTransactions) {
+          const payload = JSON.parse(innerTransaction.message.payload);
+          if (payload.code === CodeTypes.Vote) {
+            if (nemElectoralCommission.validateTransaction(innerTransaction)) {
+              return true;
             }
           }
         }
@@ -81,52 +92,67 @@ export const nemVoter = {
   },
 
   // 3. Modificar la cantidad de token de acuerdo a los votos emitidos
-  async incrementMosaicVote(numberVotes: number, mosaicIdVote: any, electoralCommissionAccount: Account, electoralEventAddress: Address) {
-    const mosaicSupplyChangeTransaction = nemMosaicService.mosaicSupplyChangeTransaction(mosaicIdVote.mosaicId, MosaicSupplyType.Increase, UInt64.fromUint(numberVotes))
+  async incrementMosaicVote(numberVotes: number, mosaicIdVote: any, electoralCommissionAccount: Account) {
+    const mosaicSupplyChangeTransaction = nemMosaicService.mosaicSupplyChangeTransaction(mosaicIdVote, MosaicSupplyType.Increase, UInt64.fromUint(numberVotes))
     const mosaicSupplyChangeSignedTransaction = nemTransactionService.signTransaction(electoralCommissionAccount, mosaicSupplyChangeTransaction);
 
     await nemTransactionService.announceTransaction(mosaicSupplyChangeSignedTransaction);
-    return nemTransactionService.awaitTransactionConfirmed(electoralEventAddress, mosaicSupplyChangeSignedTransaction)
+    return nemTransactionService.awaitTransactionConfirmed(electoralCommissionAccount.address, mosaicSupplyChangeSignedTransaction)
   },
 
   // 5. Enviar fee+token a la direccion random del voter  
   async sendVoteFeeToVoter(mosaicsVoter: any, voterAccountAddress: Address, electoralCommissionAccount: Account) {
-    const voteFeeVoterTransferTransaction = nemTransactionService.transferTransaction(voterAccountAddress, mosaicsVoter, "");
+    const message = JSON.stringify({
+      code: CodeTypes.TransferMosaicToVote
+    })
+    const voteFeeVoterTransferTransaction = nemTransactionService.transferTransaction(voterAccountAddress, mosaicsVoter, message);
     const voteFeeVoterSignedTransaction = nemTransactionService.signTransaction(electoralCommissionAccount, voteFeeVoterTransferTransaction);
-    await nemTransactionService.announceTransaction(voteFeeVoterSignedTransaction);
 
+    await nemTransactionService.announceTransaction(voteFeeVoterSignedTransaction);
     return nemTransactionService.awaitTransactionConfirmed(voterAccountAddress, voteFeeVoterSignedTransaction)
   },
 
   // 6. Enviar voto a la direccion del candidato
   async sendVotesToCandidates(candidates: any[], voterAccount: Account, electoralCommissionAccount: Account, mosaicVote: any, ) {
-    const innerTransactionCandidateVote = candidates.map((candidate: any) => {
-      const candidatePublicAccount = nemAccountService.getDeterministicPublicAccount(`${candidate.electionId}${candidate.ci}`);
-      const candidateVoteTransferTransaction = nemTransactionService.transferTransaction(candidatePublicAccount.address, [mosaicVote], "");
+    const message = JSON.stringify({
+      code: CodeTypes.Vote
+    })
+
+    let innerTransactionCandidateVote = candidates.map((candidate: any) => {
+      const candidateAddress = nemAccountService.getDeterministicPublicAccount(`${candidate.electionId}${candidate.identityDocument}`).address;
+      const candidateVoteTransferTransaction = nemTransactionService.transferTransaction(candidateAddress, [mosaicVote], message);
       return candidateVoteTransferTransaction.toAggregate(voterAccount.publicAccount);
     });
 
+    const voterAlreadyVoteTransferTransaction = nemTransactionService.transferTransaction(voterAccount.address, [], message);
+    innerTransactionCandidateVote.push(voterAlreadyVoteTransferTransaction.toAggregate(electoralCommissionAccount.publicAccount));
+
     const candidatesVoteAggregateTransaction = nemTransactionService.aggregateTransaction(innerTransactionCandidateVote, []);
     const cosignatories: Account[] = [electoralCommissionAccount];
+
     const candidatesVoteSignedTransaction = nemTransactionService.signTransactionWithCosignatories(voterAccount, cosignatories, candidatesVoteAggregateTransaction);
+
     await nemTransactionService.announceTransaction(candidatesVoteSignedTransaction);
-    return nemTransactionService.awaitTransactionConfirmed(voterAccount.address, candidatesVoteSignedTransaction)
+    return nemTransactionService.awaitTransactionConfirmed(voterAccount.address, candidatesVoteSignedTransaction);
   },
 
   async vote(voterAccount: Account, electoralEventPublickey: string, elections: any) {
-
     const electoralEventPublicAccount = nemAccountService.getPublicAccountFromPublicKey(electoralEventPublickey);
     const electoralCommissionPrivateKey = nemElectoralCommission.getElectoralCommissionPrivateKey()
     const electoralCommissionAccount = nemAccountService.getAccountFromPrivateKey(electoralCommissionPrivateKey);
-
+    console.log('voterAccount.publicKey :', voterAccount.publicKey);
     // PASO 1
     const isItTimeToVote = await nemElectoralEvent.isItTimeToVote(electoralEventPublickey);
     if (!isItTimeToVote) {
       return { voted: false, data: "No se puede votar" }
     }
 
+    const mosaicToVoteTransaction = await nemElectoralEvent.getMosaicVote(electoralEventPublicAccount)
+    const mosaicIdHex = JSON.parse(mosaicToVoteTransaction.message.payload).data.mosaicIdHex;
+    const mosaicIdToVote = new MosaicId(mosaicIdHex);
+
     // PASO 2
-    const alreadyVoted = await this.alreadyVoted(voterAccount, electoralCommissionAccount.publicAccount);
+    const alreadyVoted = await this.alreadyVoted(voterAccount.publicAccount, mosaicIdToVote);
     if (alreadyVoted)
       return { voted: false, data: "Ya votó" }
 
@@ -135,42 +161,45 @@ export const nemVoter = {
       const electionId = election.id;
       const typeCandidate = election.typeCandidate;
       const selectedCandidate = election.selectedCandidate;
-      if (typeCandidate === TypeCandidate.list) {
+      if (typeCandidate === TypeCandidate.uninominal) {
         selectedCandidate['electionId'] = electionId;
         candidates.push(selectedCandidate);
       }
-      else if (typeCandidate === TypeCandidate.uninominal) {
-        candidates = candidates.concat(selectedCandidate.map(_ => _['electionId'] = electionId));
+      else if (typeCandidate === TypeCandidate.list) {
+        candidates = candidates.concat(selectedCandidate.map(candidate => { candidate['electionId'] = electionId; return candidate }));
       }
     }
 
-    const mosaicIdVote = await nemElectoralEvent.getMosaicVote(electoralEventPublicAccount);
     const numberVotes: number = candidates.length;
 
-    const electoralEventAddress = electoralEventPublicAccount.address;
+    // PASO 4
+    const fee = this.calculateVoteFee([new Mosaic(mosaicIdToVote, UInt64.fromUint(1))], numberVotes);
+    const nemFee = NetworkCurrencyMosaic.createRelative(fee);
+    const mosaicVoteToVoter = new Mosaic(mosaicIdToVote, UInt64.fromUint(numberVotes));
+    const mosaicsVoter = [mosaicVoteToVoter, nemFee];
+    const mosaicVoteToCandidate = new Mosaic(mosaicIdToVote, UInt64.fromUint(1));
 
     try {
-      // PASO 3
-      await this.incrementMosaicVote(numberVotes, mosaicIdVote, electoralCommissionAccount, electoralEventAddress);
+      const voterHaveMosaic = await this.voterHaveMosaic(voterAccount);
+      if (voterHaveMosaic) {
+        console.log('1');
+        // PASO 3
+        console.log('incrementar token', numberVotes);
+        await this.incrementMosaicVote(numberVotes, mosaicIdToVote, electoralCommissionAccount);
 
-      // PASO 4
-      let mosaicFee = null;
-      mosaicFee = [{ mosaicId: mosaicIdVote, quantity: 1 }];
-      const fee = this.calculateVoteFee(mosaicFee, numberVotes);
-      mosaicFee = NetworkCurrencyMosaic.createRelative(fee);
-
-      // PASO 5
-      const mosaicVote = new Mosaic(mosaicIdVote, UInt64.fromUint(numberVotes));
-      const mosaicsVoter = [mosaicVote, mosaicFee];
-
-      await this.sendVoteFeeToVoter(mosaicsVoter, voterAccount.address, electoralCommissionAccount);
-
+        // PASO 5
+        console.log('token a votante :', mosaicsVoter);
+        await this.sendVoteFeeToVoter(mosaicsVoter, voterAccount.address, electoralCommissionAccount);
+      }
+      console.log('2');
       //  PASO 6
-      await this.sendVotesToCandidates(candidates, voterAccount, electoralCommissionAccount, mosaicVote);
-
+      console.log('to candidates');
+      await this.sendVotesToCandidates(candidates, voterAccount, electoralCommissionAccount, mosaicVoteToCandidate);
+      console.log('termino');
       return { voted: true, data: "Listo" }
     }
     catch (error) {
+      console.log('error :', error);
       throw (error)
     }
   },

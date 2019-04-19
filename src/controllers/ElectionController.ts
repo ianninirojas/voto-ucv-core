@@ -47,11 +47,11 @@ class ElectionController {
     }
   }
 
-  static getByIds = async (req: Request, res: Response) => {
-    const electoralEventData = req.body.electoralEventData;
-    const electionsIds = req.body.electionsIds;
+  static result = async (req: Request, res: Response) => {
+    const electoralEventPublicKey = req.params.electoralEventPublicKey;
+    const { election } = req.body;
     try {
-      const elections = await nemElection.getAll(electoralEventData, electionsIds);
+      const elections = await nemElection.result(electoralEventPublicKey, election);
       res.status(200).send(elections);
     }
     catch (error) {
@@ -59,7 +59,6 @@ class ElectionController {
       res.status(500).send("An error ocurred");
     }
   }
-
 }
 
 export default ElectionController;

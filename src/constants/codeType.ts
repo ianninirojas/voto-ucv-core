@@ -7,5 +7,6 @@ export enum CodeTypes {
   RegisterCandidate = '007',
   RegisterVoter = '008',
   RegisterElectoralRegister = '009',
-  TransferMosaicToVote = '010'
+  TransferMosaicToVote = '010',
+  Vote = '011'
 }

@@ -12,6 +12,8 @@ import { codeService } from "../services/code.service";
 import { emailService } from "../services/email.service";
 import { nemElectoralEvent } from "../models/nemElectoralEvent";
 import { nemVoter } from "../models/nemVoter";
+import { nemElection } from "../models/nemElection";
+import { nemAccountService } from "../services/nem.account.service";
 
 // 27562580
 // e6b5fe033412c84d
@@ -70,8 +72,12 @@ class VoterController {
       const accessCode = codeService.generateCode();
       elector.accessCode = bcrypt.hashSync(accessCode);
       const tokenAccess = elector.generateToken('accessCode', accessCode);
+      const electoralEventPublicAccount = nemAccountService.getPublicAccountFromPublicKey(electoralEventPublickey);
+      const electoralEventTransaction = await nemElectoralEvent.exist(electoralEventPublicAccount);
+      const electoralEvent = JSON.parse(electoralEventTransaction.message.payload).data
       const body = {
         tokenAccess,
+        electoralEventName: electoralEvent.name,
         electoralEventPublickey: elector.electoralEventPublickey
       }
       electoralRegisterRepository.save(elector)
@@ -102,6 +108,7 @@ class VoterController {
 
     const electoralRegisterRepository = getRepository(ElectoralRegister);
     let elector: ElectoralRegister;
+
     try {
       elector = await electoralRegisterRepository.findOneOrFail({
         where: {
@@ -118,7 +125,7 @@ class VoterController {
       return res.status(404).send({ data: 'No tiene acceso' });
     }
 
-    let data;
+    let data = {};
     if (!elector.password) {
       data = {
         message: 'Accesso',
@@ -142,6 +149,7 @@ class VoterController {
       jwtPayload = <any>jwt.verify(tokenAccess, config.jwtSecret);
     }
     catch (error) {
+      console.log('error :', error);
       return res.status(401).send();
     }
 
@@ -168,6 +176,11 @@ class VoterController {
       return res.status(404).send({ data: 'No está seleccionado para votar en este evento electoral' });
     }
 
+    const isItTimeToVote = await nemElectoralEvent.isItTimeToVote(electoralEventPublickey);
+    if (!isItTimeToVote) {
+      return res.status(404).send({ data: 'No se puede votar en el evento electoral' });
+    }
+
     if (!elector.password) {
       elector.password = password;
       elector.hashPassword();
@@ -180,11 +193,13 @@ class VoterController {
     }
 
     const newToken = jwt.sign({ identityDocument, accessCode }, config.jwtSecret, {
-      expiresIn: "4m"
+      expiresIn: "10m"
     });
 
     res.setHeader('token', newToken)
-    return res.status(200).send();
+    const elections = await nemElection.getAll(electoralEventPublickey, elector.electionsIds.split(','))
+
+    return res.status(200).send(elections);
   }
 
   static vote = async (req: Request, res: Response) => {
@@ -233,7 +248,7 @@ class VoterController {
       if (!response.voted) {
         return res.status(400).send({ data: response.data });
       }
-      return res.status(200).send();
+      return res.status(200).send({ data: response.data });
     }
     catch (error) {
       return res.status(400).send({ data: error });

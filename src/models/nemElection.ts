@@ -5,9 +5,17 @@ import {
   TransferTransaction,
   AggregateTransaction,
   Transaction,
+  Address,
+  AccountHttp,
+  Deadline,
+  BlockInfo,
+  BlockchainHttp,
+  MosaicId,
 } from 'nem2-sdk';
 
-import * as CryptoJS from 'crypto-js';
+import { sha3_256 } from 'js-sha3';
+
+import * as moment from 'moment'
 
 // models
 import { nemCandidate } from "../models/nemCandidate";
@@ -24,6 +32,8 @@ import { Election } from "../interfaces/Election";
 // Constans
 import { CodeTypes } from "../constants/codeType";
 import { LevelElectionEnum } from "../constants/levelElection";
+import { LocalDateTime } from 'js-joda';
+import { nemBlockService } from '../services/block.service';
 
 export const nemElection = {
 
@@ -265,7 +275,7 @@ export const nemElection = {
   },
 
   generateElectionId(message: string) {
-    return CryptoJS.MD5(message.toLowerCase()).toString();
+    return sha3_256(message.toLowerCase()).toUpperCase();
   },
 
   exist(electoralEventPublicAccount: PublicAccount, electionId: string) {
@@ -314,4 +324,59 @@ export const nemElection = {
         }
       });
   },
+
+  async result(electoralEventPublicKey: string, election: any) {
+    let candidates = [...election.candidates];
+
+    const electoralEventPublicAccount = nemAccountService.getPublicAccountFromPublicKey(electoralEventPublicKey);
+
+    const getMosaicVoteTransactionPromise = nemElectoralEvent.getMosaicVote(electoralEventPublicAccount);
+    const finalizedElectionTransactionPromise = nemElectoralEvent.finished(electoralEventPublicAccount);
+
+    try {
+      const [mosaicVoteTransaction, finalizedElectionTransaction] = await Promise.all([getMosaicVoteTransactionPromise, finalizedElectionTransactionPromise])
+
+      let electoralEventDate = {
+        start: undefined,
+        end: undefined,
+      };
+
+      const blockMosaicVoteTransaction = await nemBlockService.getBlockByHeight(mosaicVoteTransaction.transactionInfo.height.compact());
+      electoralEventDate.start = blockMosaicVoteTransaction.timestamp.compact() + (Deadline.timestampNemesisBlock * 1000);
+
+      if (finalizedElectionTransaction) {
+        const blockFinalizedElectionTransaction = await nemBlockService.getBlockByHeight(finalizedElectionTransaction.transactionInfo.height.compact());
+        electoralEventDate.end = blockFinalizedElectionTransaction.timestamp.compact() + (Deadline.timestampNemesisBlock * 1000);
+      }
+
+      const mosaicIdHex = JSON.parse(mosaicVoteTransaction.message.payload).data.mosaicIdHex;
+      const mosaicIdVote = new MosaicId(mosaicIdHex);
+      let votesPromise = [];
+      for (const candidate of candidates) {
+        const candidatePublicAccount = nemAccountService.getDeterministicPublicAccount(`${election.id}${candidate.identityDocument}`);
+        const votePromise = nemCandidate.countVotes(candidatePublicAccount, electoralEventDate, mosaicIdVote);
+        votesPromise.push(votePromise);
+      }
+      let votesElection = await Promise.all(votesPromise);
+      for (let i = 0; i < candidates.length; i++) {
+        let votesCandidate = await Promise.all(votesElection[i]);
+        let votes = votesCandidate.filter(_ => _ !== undefined);
+        candidates[i]['votes'] = votes.length;
+      }
+
+      candidates.sort((a, b) => {
+        if (a.votes > b.votes) return -1;
+        if (a.votes < b.votes) return 1;
+        return 0;
+      });
+
+      election.candidates = candidates;
+
+      return election;
+    }
+
+    catch (error) {
+      throw (error)
+    }
+  }
 }

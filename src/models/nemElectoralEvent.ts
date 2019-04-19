@@ -38,7 +38,7 @@ export const nemElectoralEvent = {
             const payload = JSON.parse(innerTransaction.message.payload);
             if (payload.code === CodeTypes.CreateMosaicVote) {
               if (nemElectoralCommission.validateTransaction(innerTransaction)) {
-                return payload.data;
+                return innerTransaction;
               }
             }
           }
@@ -67,7 +67,7 @@ export const nemElectoralEvent = {
       let message = JSON.stringify({
         code: CodeTypes.CreateMosaicVote,
         data: {
-          mosaicId: mosaicDefinitionTransaction.mosaicId
+          mosaicIdHex: mosaicDefinitionTransaction.mosaicId.toHex()
         }
       })
 

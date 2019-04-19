@@ -179,7 +179,7 @@ const selectElectoralRegister = async (electoralEventPublickey: any) => {
     const students = await getRepository(EstudiantePregrado).find({
       where: whereStudent
     });
-    participants = participants.concat(students.map(student => student['type'] = TypeElector.student));
+    participants = participants.concat(students.map(student => { student['type'] = TypeElector.student; return student }));
   }
 
   if (typesElectors['profesor']['participate']) {
@@ -233,13 +233,21 @@ const selectElectoralRegister = async (electoralEventPublickey: any) => {
         if (electoralRegister[elector.idFacultad] === undefined) {
           electoralRegister[elector.idFacultad] = [];
         }
-        const electionsIds = [];
+        let electionsIds = [];
+        for (const election of elections) {
+          if (election.levelElection === LevelElectionEnum.university ||
+            (election.typeElector === elector.type && (parseInt(election.facultyId) === parseInt(elector.idFacultad) || parseInt(election.schoolId) === parseInt(elector.idEscuela))) ||
+            (election.typeElector === TypeElector.consolidated && (parseInt(election.facultyId) === parseInt(elector.idFacultad) || parseInt(election.schoolId) === parseInt(elector.idEscuela)) && (elector.type === TypeElector.student || elector.type === TypeElector.profesor))) {
+            electionsIds.push(election.id);
+          }
+        }
         electoralRegister[elector.idFacultad].push({
           ci: elector.ci,
           facultyId: elector.idFacultad,
           schoolId: elector.idEscuela,
           type: elector.type,
           email: persona.email,
+          electionsIds: electionsIds,
           electoralEventPublickey: electoralEventPublickey,
         });
         break;
@@ -249,19 +257,20 @@ const selectElectoralRegister = async (electoralEventPublickey: any) => {
   return { created: true, data: electoralRegister }
 }
 
-const sendAuthEmail = (elector: ElectoralRegister, authCode) => {
+const sendAuthEmail = (elector: ElectoralRegister, authCode: string, electoralEvent: any) => {
 
   const tokenAuth = elector.generateToken('authCode', authCode);
   console.log('tokenAuth :', tokenAuth);
   const body = {
     tokenAuth,
-    electoralEventPublickey: elector.electoralEventPublickey
+    electoralEventPublickey: elector.electoralEventPublickey,
+    electoralEventName: electoralEvent.name
   }
   const subject = 'Autenticacion Evento Electoral';
   emailService.send(elector.email, subject, body, 'authentication');
 }
 
-const storeSQLElectoralRegister = async (electoralRegister: any) => {
+const storeSQLElectoralRegister = async (electoralRegister: any, electoralEvent: any) => {
   let electorsByFaculty = [];
   for (const facultyId in electoralRegister) {
     if (electoralRegister.hasOwnProperty(facultyId)) {
@@ -269,15 +278,17 @@ const storeSQLElectoralRegister = async (electoralRegister: any) => {
       for (const electorByFaculty of electoralRegisterByFaculty) {
         const elector = new ElectoralRegister();
         elector.ci = electorByFaculty.ci;
+        console.log('elector.ci :', elector.ci);
         elector.facultyId = electorByFaculty.facultyId;
         elector.schoolId = electorByFaculty.schoolId;
         elector.email = electorByFaculty.email;
         elector.type = electorByFaculty.type;
+        elector.electionsIds = electorByFaculty.electionsIds.toString();
         elector.electoralEventPublickey = electorByFaculty.electoralEventPublickey;
         const authCode = codeService.generateCode();
         elector.authCode = bcrypt.hashSync(authCode);
         electorsByFaculty.push(elector);
-        sendAuthEmail(elector, authCode);
+        sendAuthEmail(elector, authCode, electoralEvent);
       }
     }
   }
@@ -294,11 +305,10 @@ export const nemElectoralRegister = {
       return { created: false, data: [{ electoralRegister: "evento electoral no existe" }] }
 
     const transactionElectoralRegister = await this.exist(electoralEventPublickey);
-    if (!transactionElectoralRegister)
+    if (transactionElectoralRegister)
       return { created: false, data: [{ electoralRegister: "evento electoral ya posee registro electoral" }] }
 
     const response = await selectElectoralRegister(electoralEventPublickey);
-
     if (!response.created)
       return response;
 
@@ -325,16 +335,19 @@ export const nemElectoralRegister = {
         hashesElectoralRegisterByFaculty: hashesElectoralRegisterByFaculty
       }
     });
+
     const electoralRegisterTransferTransaction = nemTransactionService.transferTransaction(electoralEventAddress, [], message);
     const electoralRegisterSignedTransaction = nemTransactionService.signTransaction(electoralCommissionAccount, electoralRegisterTransferTransaction);
     try {
       // await nemTransactionService.announceTransaction(electoralRegisterSignedTransaction);
       // await nemTransactionService.awaitTransactionConfirmed(electoralEventAddress, electoralRegisterSignedTransaction)
-      await storeSQLElectoralRegister(electoralRegister);
+      const electoralEvent = JSON.parse(transactionElectoralEvent.message.payload).data
+      await storeSQLElectoralRegister(electoralRegister, electoralEvent);
 
       return { created: true, data: [{ electoralRegister: "registro electoral creado exitosamente" }] }
 
     } catch (error) {
+      console.log('error :', error);
       throw (error);
     }
   },

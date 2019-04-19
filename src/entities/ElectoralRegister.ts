@@ -1,6 +1,6 @@
-import { Entity, Column, PrimaryColumn, ManyToOne, JoinColumn, Index, PrimaryGeneratedColumn } from "typeorm";
+import { Entity, Column, ManyToOne, JoinColumn, Index, PrimaryGeneratedColumn } from "typeorm";
 
-import { IsNumberString, Length, IsNotEmpty, IsInt, IsEmail } from "class-validator";
+import { IsNumberString, Length, IsNotEmpty, IsInt, IsEmail, IsArray } from "class-validator";
 
 import * as jwt from "jsonwebtoken";
 
@@ -56,6 +56,10 @@ export class ElectoralRegister {
 
   @Column()
   @IsNotEmpty()
+  electionsIds: string
+
+  @Column()
+  @IsNotEmpty()
   authCode: string
 
   @Column()
@@ -68,7 +72,6 @@ export class ElectoralRegister {
     return jwt.sign(
       { identityDocument: this.ci, [typeCode]: code },
       config.jwtSecret,
-      { expiresIn: "24h" }
     );
   }
 
@@ -83,7 +86,7 @@ export class ElectoralRegister {
   checkIfUnencryptedPasswordIsValid(unencryptedPassword: string) {
     return bcrypt.compareSync(unencryptedPassword, this.password);
   }
-  
+
   hashPassword() {
     this.password = bcrypt.hashSync(this.password);
   }
