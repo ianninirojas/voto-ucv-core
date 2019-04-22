@@ -1,9 +1,9 @@
 import "reflect-metadata";
 import { createConnection } from "typeorm";
-import * as express from "express";
-import * as bodyParser from "body-parser";
-import * as helmet from "helmet";
-import * as cors from "cors";
+import express from "express";
+import bodyParser from "body-parser";
+import helmet from "helmet";
+import cors from "cors";
 import routes from "./routes";
 
 //Connects to the Database -> then starts the express

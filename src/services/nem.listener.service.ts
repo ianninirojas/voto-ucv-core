@@ -9,31 +9,23 @@ export class listenerService {
   constructor() {
     this.listener = new Listener('http://54.178.241.129:3000');
   }
-  /**
-   * open
-   */
+
   public open() {
     return this.listener.open();
   }
 
-  /**
-   * terminate
-   */
   public terminate() {
     this.listener.terminate();
   }
 
-  /**
-   * close
-   */
   public close() {
     this.listener.close();
   }
-  
+
   public newBlock() {
     return this.listener.newBlock()
   }
-  
+
   public status(address: Address) {
     return this.listener.status(address);
   }
@@ -44,6 +36,10 @@ export class listenerService {
 
   public confirmed(address: Address) {
     return this.listener.confirmed(address);
+  }
+
+  public isOpen() {
+    return this.listener.isOpen()
   }
 
 }

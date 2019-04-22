@@ -59,7 +59,7 @@ export const nemTransactionService = {
 
   announceTransaction(signedTransaction: SignedTransaction) {
     const transactionHttp = new TransactionHttp('http://54.178.241.129:3000');
-    return transactionHttp.announce(signedTransaction).toPromise();
+    return transactionHttp.announce(signedTransaction);
   },
 
   getTransaction(hashTransaction: string) {
@@ -77,14 +77,13 @@ export const nemTransactionService = {
 
     const listener = new listenerService();
     const amountOfConfirmationsToSkip = 4;
-
     return new Promise((resolve, reject) => {
       listener.open().then(() => {
         const newBlockSubscription = listener.newBlock()
           .pipe(timeout(100000)) // time in milliseconds when to timeout.
           .subscribe(
             block => {
-              console.log("New block created:" + block.height.compact());
+              console.log("New block created: " + block.height.compact());
             },
             error => {
               console.error("newBlockSubscription", error);
@@ -104,20 +103,6 @@ export const nemTransactionService = {
           },
             error => {
               console.error(error);
-              newBlockSubscription.unsubscribe();
-              listener.terminate();
-              reject(error.status);
-            }
-          );
-
-        listener.unconfirmedAdded(address)
-          .pipe(filter(transaction => (transaction.transactionInfo !== undefined
-            && transaction.transactionInfo.hash === signedTransaction.hash)))
-          .subscribe(_ => {
-            console.log("⏳: Transaction status changed to unconfirmed")
-          },
-            error => {
-              console.error('unconfirmedAdded', error);
               newBlockSubscription.unsubscribe();
               listener.terminate();
               reject(error.status);
@@ -149,6 +134,72 @@ export const nemTransactionService = {
               reject(error.status);
             }
           );
+      });
+    });
+  },
+
+  announceTransactionAsync(address: Address, signedTransaction: SignedTransaction) {
+    const listener = new listenerService();
+    const amountOfConfirmationsToSkip = 4;
+    return new Promise((resolve, reject) => {
+      listener.open().then(() => {
+        const newBlockSubscription = listener.newBlock()
+          .pipe(timeout(100000)) // time in milliseconds when to timeout.
+          .subscribe(
+            block => {
+              console.log("New block created: " + block.height.compact());
+            },
+            error => {
+              console.error("newBlockSubscription", error);
+              newBlockSubscription.unsubscribe();
+              listener.terminate();
+              reject(error.status);
+            }
+          );
+
+        listener.status(address)
+          .pipe(filter(error => error.hash === signedTransaction.hash))
+          .subscribe(error => {
+            console.log("status, error:" + error.status);
+            newBlockSubscription.unsubscribe();
+            listener.terminate();
+            reject(error.status);
+          },
+            error => {
+              console.error(error);
+              newBlockSubscription.unsubscribe();
+              listener.terminate();
+              reject(error.status);
+            }
+          );
+
+        listener.confirmed(address)
+          .pipe(
+            filter(transaction => (transaction.transactionInfo !== undefined
+              && transaction.transactionInfo.hash === signedTransaction.hash)),
+            mergeMap(transaction => {
+              return listener.newBlock()
+                .pipe(
+                  skip(amountOfConfirmationsToSkip),
+                  first(),
+                  map(_ => transaction))
+            })
+          )
+          .subscribe(_ => {
+            newBlockSubscription.unsubscribe();
+            listener.terminate();
+            console.log("✅: Transaction confirmed");
+            resolve(true);
+          },
+            error => {
+              console.error('confirmed', error);
+              newBlockSubscription.unsubscribe();
+              listener.terminate();
+              reject(error.status);
+            }
+          );
+
+        this.announceTransaction(signedTransaction);
       });
     });
   },

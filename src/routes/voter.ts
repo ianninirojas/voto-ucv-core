@@ -5,16 +5,16 @@ import { Router } from "express";
 import VoterController from "../controllers/VoterController";
 
 // middlewares
-import { checkJwt } from "../middlewares/checkJwt";
+import { checkTokenVoter } from "../middlewares/checkTokenVoter";
 
 const router = Router();
 
-router.post("/electoral-event/:electoralEventPublickey/voter/auth", VoterController.auth);
+router.get("/electoral-event/:electoralEventPublickey/voter/auth", [checkTokenVoter('auth')], VoterController.auth);
 
-router.post("/electoral-event/:electoralEventPublickey/voter/access", VoterController.access);
+router.post("/electoral-event/:electoralEventPublickey/voter/access", [checkTokenVoter('access')], VoterController.access);
 
-router.post("/electoral-event/:electoralEventPublickey/voter/login", VoterController.login);
+router.post("/electoral-event/:electoralEventPublickey/voter/login", [checkTokenVoter('login')], VoterController.login);
 
-router.post("/electoral-event/:electoralEventPublickey/voter/vote", VoterController.vote);
+router.post("/electoral-event/:electoralEventPublickey/voter/vote", [checkTokenVoter('vote')], VoterController.vote);
 
 export default router;

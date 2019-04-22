@@ -15,8 +15,6 @@ import {
 
 import { sha3_256 } from 'js-sha3';
 
-import * as moment from 'moment'
-
 // models
 import { nemCandidate } from "../models/nemCandidate";
 import { nemElectoralEvent } from "../models/nemElectoralEvent";
@@ -43,6 +41,12 @@ export const nemElection = {
       return { created: false, data: validData.data }
 
     const electoralEventPublicAccount = nemAccountService.getPublicAccountFromPublicKey(electoralEventPublicKey);
+
+    if (!electionData.facultyId)
+      electionData.facultyId = '00';
+
+    if (!electionData.schoolId)
+      electionData.schoolId = '00';
 
     const electionId = this.generateElectionId(`
       ${electoralEventPublicKey}
@@ -95,8 +99,7 @@ export const nemElection = {
           const innerTransactions = [...registerCandidatesTransactions, electoralEventCreateTransferTransaction]
           const electoralEventCreateAggregateTransaction = nemTransactionService.aggregateTransaction(innerTransactions, []);
           const electoralEventCreateSignedTransaction = nemTransactionService.signTransaction(electoralCommissionAccount, electoralEventCreateAggregateTransaction);
-          await nemTransactionService.announceTransaction(electoralEventCreateSignedTransaction);
-          await nemTransactionService.awaitTransactionConfirmed(electoralEventAddress, electoralEventCreateSignedTransaction)
+          await nemTransactionService.announceTransactionAsync(electoralEventAddress, electoralEventCreateSignedTransaction)
 
           const response = { created: true, data: [{ "election": "electoral event successfully created" }] };
 

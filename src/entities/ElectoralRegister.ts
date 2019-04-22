@@ -68,10 +68,15 @@ export class ElectoralRegister {
   @Column()
   password: string
 
-  generateToken(typeCode, code) {
+  generateToken(typeCode, code, expiresIn?) {
+    let options = {};
+    if (expiresIn) {
+      options['expiresIn'] = expiresIn;
+    }
     return jwt.sign(
-      { identityDocument: this.ci, [typeCode]: code },
+      { identityDocument: this.ci, typeCode, code },
       config.jwtSecret,
+      options,
     );
   }
 

@@ -31,7 +31,6 @@ import { nemTransactionService } from "../services/nem.transaction.service";
 import { CodeTypes } from "../constants/codeType";
 import { TypeElector } from '../constants/typeElector';
 import { LevelElectionEnum } from "../constants/levelElection";
-import { close } from 'inspector';
 
 const selectElectoralRegister = async (electoralEventPublickey: any) => {
 
@@ -257,15 +256,14 @@ const selectElectoralRegister = async (electoralEventPublickey: any) => {
   return { created: true, data: electoralRegister }
 }
 
-const sendAuthEmail = (elector: ElectoralRegister, authCode: string, electoralEvent: any) => {
+const sendAuthEmail = (elector: ElectoralRegister, tokenAuth: string, electoralEvent: any) => {
 
-  const tokenAuth = elector.generateToken('authCode', authCode);
-  console.log('tokenAuth :', tokenAuth);
   const body = {
     tokenAuth,
     electoralEventPublickey: elector.electoralEventPublickey,
     electoralEventName: electoralEvent.name
   }
+  
   const subject = 'Autenticacion Evento Electoral';
   emailService.send(elector.email, subject, body, 'authentication');
 }
@@ -278,7 +276,6 @@ const storeSQLElectoralRegister = async (electoralRegister: any, electoralEvent:
       for (const electorByFaculty of electoralRegisterByFaculty) {
         const elector = new ElectoralRegister();
         elector.ci = electorByFaculty.ci;
-        console.log('elector.ci :', elector.ci);
         elector.facultyId = electorByFaculty.facultyId;
         elector.schoolId = electorByFaculty.schoolId;
         elector.email = electorByFaculty.email;
@@ -288,7 +285,8 @@ const storeSQLElectoralRegister = async (electoralRegister: any, electoralEvent:
         const authCode = codeService.generateCode();
         elector.authCode = bcrypt.hashSync(authCode);
         electorsByFaculty.push(elector);
-        sendAuthEmail(elector, authCode, electoralEvent);
+        const tokenAuth = elector.generateToken('auth', authCode);
+        sendAuthEmail(elector, tokenAuth, electoralEvent);
       }
     }
   }
@@ -339,8 +337,7 @@ export const nemElectoralRegister = {
     const electoralRegisterTransferTransaction = nemTransactionService.transferTransaction(electoralEventAddress, [], message);
     const electoralRegisterSignedTransaction = nemTransactionService.signTransaction(electoralCommissionAccount, electoralRegisterTransferTransaction);
     try {
-      // await nemTransactionService.announceTransaction(electoralRegisterSignedTransaction);
-      // await nemTransactionService.awaitTransactionConfirmed(electoralEventAddress, electoralRegisterSignedTransaction)
+      // await nemTransactionService.announceTransactionAsync(electoralEventAddress, electoralRegisterSignedTransaction)
       const electoralEvent = JSON.parse(transactionElectoralEvent.message.payload).data
       await storeSQLElectoralRegister(electoralRegister, electoralEvent);
 

@@ -9,7 +9,7 @@ import {
   AggregateTransaction,
 } from 'nem2-sdk';
 
-import * as moment from 'moment'
+import moment from 'moment'
 
 // models
 import { nemElection } from "../models/nemElection";
@@ -82,9 +82,7 @@ export const nemElectoralEvent = {
       const createMosaicToVoteAggregateTransaction = nemTransactionService.aggregateTransaction(innerTransactions, []);
       const createMosaicToVoteSignedTransaction = nemTransactionService.signTransaction(electoralCommissionAccount, createMosaicToVoteAggregateTransaction);
 
-      await nemTransactionService.announceTransaction(createMosaicToVoteSignedTransaction);
-
-      await nemTransactionService.awaitTransactionConfirmed(eventElectoralAddress, createMosaicToVoteSignedTransaction)
+      await nemTransactionService.announceTransactionAsync(eventElectoralAddress, createMosaicToVoteSignedTransaction)
     }
     catch (error) {
       throw (error)
@@ -135,9 +133,7 @@ export const nemElectoralEvent = {
       const electoralEventFinishTransferTransaction = nemTransactionService.transferTransaction(electoralEventAddress, [], message);
       const electoralEventFinishSignedTransaction = nemTransactionService.signTransaction(electoralCommissionAccount, electoralEventFinishTransferTransaction);
 
-      await nemTransactionService.announceTransaction(electoralEventFinishSignedTransaction);
-
-      await nemTransactionService.awaitTransactionConfirmed(electoralEventAddress, electoralEventFinishSignedTransaction);
+      await nemTransactionService.announceTransactionAsync(electoralEventAddress, electoralEventFinishSignedTransaction);
       return { finished: true, data: "electoral event finished" }
 
     } catch (error) {
@@ -161,7 +157,7 @@ export const nemElectoralEvent = {
         return { activated: false, data: [{ electoralEvent: "evento electoral no tiene elecciones asociadas" }] }
 
       const electoralRegister = await nemElectoralRegister.exist(electoralEventPublicKey);
-      if (!electoralRegister)
+      if (electoralRegister)
         return { activated: false, data: [{ electoralEvent: "evento electoral no tiene registro electoral asociado" }] }
 
       const electoralEventAddress = electoralEventPublicAccount.address;
@@ -331,9 +327,7 @@ export const nemElectoralEvent = {
 
       const electoralEventCreateTransferTransaction = nemTransactionService.transferTransaction(electoralEventAddress, [], message);
       const electoralEventCreateSignedTransaction = nemTransactionService.signTransaction(electoralCommissionAccount, electoralEventCreateTransferTransaction);
-      await nemTransactionService.announceTransaction(electoralEventCreateSignedTransaction);
-
-      await nemTransactionService.awaitTransactionConfirmed(electoralEventAddress, electoralEventCreateSignedTransaction);
+      await nemTransactionService.announceTransactionAsync(electoralEventAddress, electoralEventCreateSignedTransaction);
 
       const response = { created: true, data: { electoralEventHashTransaction: electoralEventCreateSignedTransaction.hash } };
 
