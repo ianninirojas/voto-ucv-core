@@ -169,7 +169,6 @@ class VoterController {
 
   static vote = async (req: Request, res: Response) => {
     req.setTimeout(0, () => { });
-    console.log(' ');
     console.log('Empezando controller');
     console.log(' ');
     

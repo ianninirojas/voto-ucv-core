@@ -153,13 +153,18 @@ export const nemVoter = {
       const candidatesVoteSignedTransaction = this.sendVotesToCandidates(candidates, voterAccount, electoralCommissionAccount, mosaicVoteToCandidate);
 
       const voterHaveMosaic = await this.voterHaveMosaic(voterAccount);
+      console.log('voterHaveMosaic :', voterHaveMosaic);
       if (!voterHaveMosaic) {
         // PASO 3
+        console.log('increment token');
         await nemTransactionService.announceTransactionAsync(electoralCommissionAccount.address, mosaicSupplyChangeSignedTransaction);
+        
         // PASO 5      
+        console.log('send token to voter');
         await nemTransactionService.announceTransactionAsync(voterAccount.address, voteFeeVoterSignedTransaction);
       }
       //  PASO 6
+      console.log('send token to candidate');
       await nemTransactionService.announceTransactionAsync(voterAccount.address, candidatesVoteSignedTransaction);
       return { voted: true, data: "Listo" }
     }

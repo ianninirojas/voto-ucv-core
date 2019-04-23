@@ -73,74 +73,10 @@ export const nemTransactionService = {
     return accountHttp.transactions(publicAccount, queryParam).toPromise();
   },
 
-  awaitTransactionConfirmed(address: Address, signedTransaction: SignedTransaction) {
-
-    const listener = new listenerService();
-    const amountOfConfirmationsToSkip = 4;
-    return new Promise((resolve, reject) => {
-      listener.open().then(() => {
-        const newBlockSubscription = listener.newBlock()
-          .pipe(timeout(100000)) // time in milliseconds when to timeout.
-          .subscribe(
-            block => {
-              console.log("New block created: " + block.height.compact());
-            },
-            error => {
-              console.error("newBlockSubscription", error);
-              newBlockSubscription.unsubscribe();
-              listener.terminate();
-              reject(error.status);
-            }
-          );
-
-        listener.status(address)
-          .pipe(filter(error => error.hash === signedTransaction.hash))
-          .subscribe(error => {
-            console.log("status, error:" + error.status);
-            newBlockSubscription.unsubscribe();
-            listener.terminate();
-            reject(error.status);
-          },
-            error => {
-              console.error(error);
-              newBlockSubscription.unsubscribe();
-              listener.terminate();
-              reject(error.status);
-            }
-          );
-
-        listener.confirmed(address)
-          .pipe(
-            filter(transaction => (transaction.transactionInfo !== undefined
-              && transaction.transactionInfo.hash === signedTransaction.hash)),
-            mergeMap(transaction => {
-              return listener.newBlock()
-                .pipe(
-                  skip(amountOfConfirmationsToSkip),
-                  first(),
-                  map(_ => transaction))
-            })
-          )
-          .subscribe(_ => {
-            newBlockSubscription.unsubscribe();
-            listener.terminate();
-            console.log("✅: Transaction confirmed");
-            resolve(true);
-          },
-            error => {
-              console.error('confirmed', error);
-              newBlockSubscription.unsubscribe();
-              listener.terminate();
-              reject(error.status);
-            }
-          );
-      });
-    });
-  },
-
   announceTransactionAsync(address: Address, signedTransaction: SignedTransaction) {
     const listener = new listenerService();
     const amountOfConfirmationsToSkip = 4;
+    let announceTransactionSubscribe = undefined;
     return new Promise((resolve, reject) => {
       listener.open().then(() => {
         const newBlockSubscription = listener.newBlock()
@@ -152,6 +88,9 @@ export const nemTransactionService = {
             error => {
               console.error("newBlockSubscription", error);
               newBlockSubscription.unsubscribe();
+              if (announceTransactionSubscribe) {
+                announceTransactionSubscribe.unsubscribe();
+              }
               listener.terminate();
               reject(error.status);
             }
@@ -162,12 +101,18 @@ export const nemTransactionService = {
           .subscribe(error => {
             console.log("status, error:" + error.status);
             newBlockSubscription.unsubscribe();
+            if (announceTransactionSubscribe) {
+              announceTransactionSubscribe.unsubscribe();
+            }
             listener.terminate();
             reject(error.status);
           },
             error => {
               console.error(error);
               newBlockSubscription.unsubscribe();
+              if (announceTransactionSubscribe) {
+                announceTransactionSubscribe.unsubscribe();
+              }
               listener.terminate();
               reject(error.status);
             }
@@ -188,18 +133,27 @@ export const nemTransactionService = {
           .subscribe(_ => {
             newBlockSubscription.unsubscribe();
             listener.terminate();
+            if (announceTransactionSubscribe) {
+              announceTransactionSubscribe.unsubscribe();
+            }
             console.log("✅: Transaction confirmed");
             resolve(true);
           },
             error => {
               console.error('confirmed', error);
               newBlockSubscription.unsubscribe();
+              if (announceTransactionSubscribe) {
+                announceTransactionSubscribe.unsubscribe();
+              }
               listener.terminate();
               reject(error.status);
             }
           );
 
-        this.announceTransaction(signedTransaction);
+        announceTransactionSubscribe = this.announceTransaction(signedTransaction)
+          .subscribe(
+            x => console.log('transaction announce'),
+            error => console.error(error));
       });
     });
   },
