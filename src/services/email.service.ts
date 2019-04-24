@@ -1,4 +1,4 @@
-var sender = 'smtps://iannini.rojas%40gmail.com'   // The emailto use in sending the email(Change the @ symbol to %40 or do a url encoding )
+var sender = 'smtps://voto.ucv%40gmail.com'   // The emailto use in sending the email(Change the @ symbol to %40 or do a url encoding )
 var password = 'koko151215'  // password of the email to use
 
 var nodemailer = require('nodemailer');
@@ -33,7 +33,7 @@ const transport = nodemailer.createTransport({
   secure: true,
   port: 465,
   auth: {
-    user: 'iannini.rojas@gmail.com',
+    user: 'voto.ucv@gmail.com',
     pass: 'koko151215'
   }
 });

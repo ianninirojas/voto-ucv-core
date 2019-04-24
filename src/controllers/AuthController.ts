@@ -9,6 +9,8 @@ import { validate } from "class-validator";
 import { User } from "../entities/User";
 import config from "../config/config";
 
+import { secrets } from "../config";
+
 class AuthController {
   static login = async (req: Request, res: Response) => {
     //Check if username and password are set
@@ -34,7 +36,7 @@ class AuthController {
     //Sing JWT, valid for 1 hour
     const token = jwt.sign(
       { userId: user.id, username: user.username, role: user.role },
-      config.jwtSecret,
+      secrets.jwtSecret,
       { expiresIn: "1h" }
     );
 

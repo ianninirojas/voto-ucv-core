@@ -42,11 +42,19 @@ class ElectoralEventController {
     const electoralEventPublicKey = req.params.publickey;
     const electoralEventPublicAccount = nemAccountService.getPublicAccountFromPublicKey(electoralEventPublicKey);
     const electoralEventTransaction = await nemElectoralEvent.exist(electoralEventPublicAccount);
-    if(!electoralEventTransaction) {
+    if (!electoralEventTransaction) {
       return res.status(400).send({ data: "Evento Electoral no existe" });
     }
-    const electoralEvent = JSON.parse(electoralEventTransaction.message.payload).data
-    return res.status(200).send(electoralEvent);
+    const electoralEvent = JSON.parse(electoralEventTransaction.message.payload).data;
+
+    const activePromise = nemElectoralEvent.getMosaicVote(electoralEventPublicAccount);
+    const finishedPromise = nemElectoralEvent.finished(electoralEventPublicAccount);
+    await Promise.all([activePromise, finishedPromise])
+      .then(([active, finished]) => {
+        electoralEvent.active = active ? true : false;
+        electoralEvent.finished = finished ? true : false;
+        return res.status(200).send(electoralEvent);
+      });
   }
 
   static create = async (req: Request, res: Response) => {

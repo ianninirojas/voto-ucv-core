@@ -4,10 +4,12 @@ import {
   Listener,
 } from 'nem2-sdk';
 
+import { env } from "../config";
+
 export class listenerService {
   listener: Listener
   constructor() {
-    this.listener = new Listener('http://54.178.241.129:3000');
+    this.listener = new Listener(env.apiNemUrl);
   }
 
   public open() {

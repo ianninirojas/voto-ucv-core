@@ -1,26 +1,19 @@
 import {
-  MosaicId, Transaction, TransactionMapping,
+  Transaction,
 } from 'nem2-sdk';
-import { nemAccountService } from '../services/nem.account.service';
 
-// Profile stored correctly
-// default->
-//         Network:        MIJIN_TEST
-// http://54.178.241.129:3000
-// New Account:    SA6CSB-C2GHDO-RFBY4I-SAMLPE-DBHF7R-T6QUQR-5D5Q
-// Public Key:     F227B3268481DF7F9825CFB7C2051F441A9BC0C65FA0AA2CF3A438C4B3177B81
-// Private Key:    54B494F5BBCE235D753E609EC460C69947495280D8DE381579E3F15BE4CF81CA
+import { nemAccountService } from '../services/nem.account.service';
 
 // default->
 //         Network:        MIJIN_TEST
 //         Url:            http://54.178.241.129:3000
-//         Address:        SD2JQODO2F73GAU3BRUQDE3ENVA7Y4TJ2OL4KYB7
-//         PublicKey:      0B14B288D888E424634BE76E9BADF618673C7639471F0BC6920BCD0CF35EB42D
-//         PrivateKey:     1A245D98922DAEFC0B1F6B93AA22B88ABBF9461C39BFB43F1D04356081920348
+// New Account: SCXMI2OZU26476SECD6VZ7VAL37VKWQDVLPZK5CD
+// Public Key: 142A40F3955792E4810C087B3EEB497BE3E27F755C29C140D964549478EBCBEC
+// Private Key: 62C16BF741054567DD834F5670723DAB7031B114F919B2ECBA1D395F2F9F7B86
 
 export const nemElectoralCommission = {
   getElectoralCommissionPrivateKey() {
-    return '54B494F5BBCE235D753E609EC460C69947495280D8DE381579E3F15BE4CF81CA';
+    return '62C16BF741054567DD834F5670723DAB7031B114F919B2ECBA1D395F2F9F7B86';
   },
 
   validateTransaction(transaction: Transaction) {

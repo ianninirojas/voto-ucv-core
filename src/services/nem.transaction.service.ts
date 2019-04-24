@@ -18,15 +18,12 @@ import {
   AggregateTransactionCosignature
 } from 'nem2-sdk';
 
+import { env } from "../config";
+
 import { timeout, filter, mergeMap, skip, first, map } from "rxjs/operators";
-
-// models
-
-import { nemElectoralCommission } from "../models/nemElectoralCommission";
 
 // services
 import { listenerService } from "../services/nem.listener.service";
-import { resolve } from 'dns';
 
 export const nemTransactionService = {
 
@@ -58,24 +55,24 @@ export const nemTransactionService = {
   },
 
   announceTransaction(signedTransaction: SignedTransaction) {
-    const transactionHttp = new TransactionHttp('http://54.178.241.129:3000');
+    const transactionHttp = new TransactionHttp(env.apiNemUrl);
     return transactionHttp.announce(signedTransaction);
   },
 
   getTransaction(hashTransaction: string) {
-    const transactionHttp = new TransactionHttp('http://54.178.241.129:3000');
+    const transactionHttp = new TransactionHttp(env.apiNemUrl);
     return transactionHttp.getTransaction(hashTransaction).toPromise();
   },
 
   getTransactions(publicAccount: PublicAccount, pageSize: number, id: string | undefined) {
-    const accountHttp = new AccountHttp('http://54.178.241.129:3000');
+    const accountHttp = new AccountHttp(env.apiNemUrl);
     const queryParam = new QueryParams(pageSize, id);
     return accountHttp.transactions(publicAccount, queryParam).toPromise();
   },
 
   announceTransactionAsync(address: Address, signedTransaction: SignedTransaction) {
     const listener = new listenerService();
-    const amountOfConfirmationsToSkip = 4;
+    const amountOfConfirmationsToSkip = 3;
     let announceTransactionSubscribe = undefined;
     return new Promise((resolve, reject) => {
       listener.open().then(() => {

@@ -6,7 +6,7 @@ import * as jwt from "jsonwebtoken";
 
 import * as bcrypt from "bcryptjs";
 
-import config from "../config/config";
+import { secrets } from "../config";
 
 import { School } from "../entities/School";
 import { Persona } from "../entities/Persona";
@@ -75,7 +75,7 @@ export class ElectoralRegister {
     }
     return jwt.sign(
       { identityDocument: this.ci, typeCode, code },
-      config.jwtSecret,
+      secrets.jwtSecret,
       options,
     );
   }

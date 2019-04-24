@@ -1,16 +1,9 @@
 import {
-  Mosaic,
-  UInt64,
+  MosaicId,
+  Deadline,
   PublicAccount,
   TransferTransaction,
   AggregateTransaction,
-  Transaction,
-  Address,
-  AccountHttp,
-  Deadline,
-  BlockInfo,
-  BlockchainHttp,
-  MosaicId,
 } from 'nem2-sdk';
 
 import { sha3_256 } from 'js-sha3';
@@ -282,6 +275,7 @@ export const nemElection = {
   },
 
   exist(electoralEventPublicAccount: PublicAccount, electionId: string) {
+    console.log('electionId', electionId)
     return nemTransactionService.searchTransaction(electoralEventPublicAccount, AggregateTransaction,
       (transactionElectionCreate: any): any => {
         for (const innerTransaction of transactionElectionCreate.innerTransactions) {

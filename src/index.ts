@@ -5,9 +5,10 @@ import bodyParser from "body-parser";
 import helmet from "helmet";
 import cors from "cors";
 import routes from "./routes";
+import { dbConnection } from "./config";
 
 //Connects to the Database -> then starts the express
-createConnection()
+dbConnection
   .then(async connection => {
     // Create a new express application instance
     const app = express();
@@ -20,8 +21,11 @@ createConnection()
     //Set all routes from routes folder
     app.use("/", routes);
 
-    app.listen(3002, () => {
-      console.log("Server started on port 3002!");
+    const PORT = process.env.PORT || 8080;
+
+    app.listen(PORT, () => {
+      console.log(`App listening on port ${PORT}`);
+      console.log('Press Ctrl+C to quit.');
     });
   })
   .catch(error => console.log(error));

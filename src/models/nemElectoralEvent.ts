@@ -157,12 +157,15 @@ export const nemElectoralEvent = {
         return { activated: false, data: [{ electoralEvent: "evento electoral no tiene elecciones asociadas" }] }
 
       const electoralRegister = await nemElectoralRegister.exist(electoralEventPublicKey);
-      if (electoralRegister)
+      if (!electoralRegister)
         return { activated: false, data: [{ electoralEvent: "evento electoral no tiene registro electoral asociado" }] }
 
       const electoralEventAddress = electoralEventPublicAccount.address;
 
       await this.createMosaicToVote(electoralEventAddress);
+
+      nemElectoralRegister.activateElectoralRegister(electoralEventPublicKey);
+
       return { activated: true, data: "electoral event activate" }
     }
     catch (error) {
@@ -188,7 +191,7 @@ export const nemElectoralEvent = {
     if (electoralEventTransaction instanceof TransferTransaction) {
       if (nemElectoralCommission.validateTransaction(electoralEventTransaction)) {
         const payload = JSON.parse(electoralEventTransaction.message.payload);
-        return payload;
+        return payload.data;
       }
     }
     return null;
@@ -215,8 +218,18 @@ export const nemElectoralEvent = {
     const electoralEvents = [];
     for (const electoralEventHash of electoralEventsHash) {
       const electoralEvent = await this.getByHash(electoralEventHash.hash);
-      if (electoralEvent)
-        electoralEvents.push(electoralEvent);
+      if (electoralEvent) {
+        const electoralEventPublicKey = nemAccountService.generatePublicKey(electoralEvent.name.toLowerCase());
+        const electoralEventPublicAccount = nemAccountService.getPublicAccountFromPublicKey(electoralEventPublicKey);
+        const activePromise = nemElectoralEvent.getMosaicVote(electoralEventPublicAccount);
+        const finishedPromise = nemElectoralEvent.finished(electoralEventPublicAccount);
+        await Promise.all([activePromise, finishedPromise])
+          .then(([active, finished]) => {
+            electoralEvent['active'] = active ? true : false;
+            electoralEvent['finished'] = finished ? true : false;
+            electoralEvents.push(electoralEvent);
+          })
+      }
     }
     return electoralEvents;
   },

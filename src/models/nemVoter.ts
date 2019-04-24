@@ -168,10 +168,9 @@ export const nemVoter = {
       await nemTransactionService.announceTransactionAsync(voterAccount.address, candidatesVoteSignedTransaction);
       return { voted: true, data: "Listo" }
     }
-
     catch (error) {
-      console.log('catch');
       console.log('error :', error);
+      throw (error);
     }
 
   }

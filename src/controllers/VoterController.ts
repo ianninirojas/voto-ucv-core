@@ -16,21 +16,11 @@ import { nemElection } from "../models/nemElection";
 import { nemAccountService } from "../services/nem.account.service";
 
 class VoterController {
-
-  static prueba = async (req: Request, res: Response) => {
-    const code = codeService.generateCode();
-    const hash = bcrypt.hashSync(code);
-    const token = jwt.sign(
-      { identityDocument: '24276962', typeCode: 'auth', code },
-      config.jwtSecret,
-    );
-  }
-
   static auth = async (req: Request, res: Response) => {
     const electoralEventPublickey = req.params.electoralEventPublickey
     const { identityDocument, code } = req.body.jwtPayload;
-    const electoralRegisterRepository = getRepository(ElectoralRegister);
 
+    const electoralRegisterRepository = getRepository(ElectoralRegister);
     let elector: ElectoralRegister;
 
     try {
@@ -169,9 +159,7 @@ class VoterController {
 
   static vote = async (req: Request, res: Response) => {
     req.setTimeout(0, () => { });
-    console.log('Empezando controller');
-    console.log(' ');
-    
+
     const electoralEventPublickey = req.params.electoralEventPublickey
     const { candidates, password } = req.body;
     const { identityDocument, code } = req.body.jwtPayload;
@@ -200,11 +188,10 @@ class VoterController {
       return res.status(404).send({ data: 'Contraseña no coincide con la registrada' });
     }
 
-    const seed = { electoralEventPublickey, password, identityDocument, code }
-
-    const voterAccount = nemVoter.getAccount(seed);
-
     try {
+      const seed = { electoralEventPublickey, password, identityDocument, code }
+      const voterAccount = nemVoter.getAccount(seed);
+
       const response = await nemVoter.vote(voterAccount, electoralEventPublickey, candidates);
       if (!response.voted) {
         return res.status(400).send({ data: response.data });
