@@ -14,6 +14,7 @@ import { nemElectoralEvent } from "../models/nemElectoralEvent";
 import { nemVoter } from "../models/nemVoter";
 import { nemElection } from "../models/nemElection";
 import { nemAccountService } from "../services/nem.account.service";
+import { Persona } from "../entities/Persona";
 
 class VoterController {
   static auth = async (req: Request, res: Response) => {
@@ -52,10 +53,11 @@ class VoterController {
         electoralEventName: electoralEvent.name,
         electoralEventPublickey: elector.electoralEventPublickey
       }
-      electoralRegisterRepository.save(elector)
+      electoralRegisterRepository.save(elector);
+      const person = await getRepository(Persona).findOne({ where: { ci: elector.ci } });
 
       const subject = 'Autorización Evento Electoral';
-      emailService.send(elector.email, subject, body, 'authorization');
+      emailService.send(person.email, subject, body, 'authorization');
     }
 
     return res.status(200).send({ data: 'Autenticado' });

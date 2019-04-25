@@ -15,6 +15,8 @@ const prod: ConnectionOptions = {
   },
   synchronize: true,
   logging: false,
+  connectTimeout: 30000,
+  acquireTimeout: 30000,
   entities: [
     `${parentDir}/entities/*.js`,
   ]
@@ -37,10 +39,10 @@ const dbConfig: ConnectionOptions = process.env.REACT_APP_ENV === "production" ?
 
 const dbConnection: Promise<Connection> = createConnection(dbConfig);
 
-// console.log('process.env.REACT_APP_ENV :', process.env.REACT_APP_ENV);
+console.log('process.env.REACT_APP_ENV :', process.env.REACT_APP_ENV);
 
-// console.log('dbConfig :', dbConfig);
+console.log('dbConfig :', dbConfig);
 
-// console.log('dbConnection :', dbConnection.then(x => console.log('x ', x, ' x.entityMetadatas :', x.entityMetadatas)));
+console.log('dbConnection :', dbConnection.then(x => console.log('x ', x, ' x.entityMetadatas :', x.entityMetadatas)));
 
 export { dbConnection };
