@@ -46,7 +46,8 @@
   "scripts": {
     "prepare": "npm run gcp-build",
     "pretest": "npm run gcp-build",
-    "start-dev": "cross-env REACT_APP_ENV=\"development\" set debug=* && ts-node-dev --respawn --transpileOnly ./src/index.ts",
+    "db-dev": "./cloud_sql_proxy -instances='core-voto-ucv:us-central1:voto-ucv'=tcp:3306",
+    "start-dev": "set debug=* && cross-env REACT_APP_ENV=\"development\" ts-node-dev --respawn --transpileOnly ./src/index.ts",
     "start": "node ./src/index.js",
     "gcp-build": "tsc -p .",
     "deploy": "gcloud app deploy"

@@ -17,6 +17,7 @@ class ElectionController {
       return res.status(200).send({ data: "Election successfully created" });
     }
     catch (error) {
+      console.log('error', error)
       return res.status(500).send({ data: { message: 'error' } });
     }
   }

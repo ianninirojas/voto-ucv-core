@@ -104,7 +104,7 @@ export const nemElection = {
       })
 
       .catch(reason => {
-        throw new Error(reason);
+        throw reason;
       })
   },
 
@@ -275,15 +275,16 @@ export const nemElection = {
   },
 
   exist(electoralEventPublicAccount: PublicAccount, electionId: string) {
-    console.log('electionId', electionId)
     return nemTransactionService.searchTransaction(electoralEventPublicAccount, AggregateTransaction,
       (transactionElectionCreate: any): any => {
         for (const innerTransaction of transactionElectionCreate.innerTransactions) {
-          const payload = JSON.parse(innerTransaction.message.payload);
-          if (payload.code === CodeTypes.CreateElection) {
-            if (payload.data.id === electionId) {
-              if (nemElectoralCommission.validateTransaction(innerTransaction)) {
-                return true;
+          if (innerTransaction instanceof TransferTransaction) {
+            const payload = JSON.parse(innerTransaction.message.payload);
+            if (payload.code === CodeTypes.CreateElection) {
+              if (payload.data.id === electionId) {
+                if (nemElectoralCommission.validateTransaction(innerTransaction)) {
+                  return true;
+                }
               }
             }
           }

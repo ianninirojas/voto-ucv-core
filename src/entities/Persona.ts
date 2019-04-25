@@ -3,7 +3,8 @@
 import {
   Entity,
   PrimaryColumn,
-  Column
+  Column,
+  Unique
 } from "typeorm";
 
 import {
@@ -22,6 +23,7 @@ export enum Sexo {
 }
 
 @Entity()
+@Unique(['email'])
 export class Persona {
   @PrimaryColumn()
   @IsNumberString()

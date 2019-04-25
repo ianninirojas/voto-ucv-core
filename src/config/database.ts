@@ -22,11 +22,11 @@ const prod: ConnectionOptions = {
 
 const dev: ConnectionOptions = {
   type: "mysql",
-  host: "127.0.0.1",
+  host: "35.226.48.37",
   port: 3306,
   username: "root",
-  password: "",
-  database: "voto-ucv",
+  password: "3k8J4TESma4HbvW",
+  database: "voto_ucv",
   synchronize: true,
   logging: false,
   entities: [
@@ -37,10 +37,10 @@ const dbConfig: ConnectionOptions = process.env.REACT_APP_ENV === "production" ?
 
 const dbConnection: Promise<Connection> = createConnection(dbConfig);
 
-console.log('process.env.REACT_APP_ENV :', process.env.REACT_APP_ENV);
+// console.log('process.env.REACT_APP_ENV :', process.env.REACT_APP_ENV);
 
-console.log('dbConfig :', dbConfig);
+// console.log('dbConfig :', dbConfig);
 
-console.log('dbConnection :', dbConnection.then(x => console.log('x ', x, ' x.entityMetadatas :', x.entityMetadatas)));
+// console.log('dbConnection :', dbConnection.then(x => console.log('x ', x, ' x.entityMetadatas :', x.entityMetadatas)));
 
 export { dbConnection };

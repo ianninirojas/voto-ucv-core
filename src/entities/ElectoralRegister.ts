@@ -1,6 +1,6 @@
 import { Entity, Column, ManyToOne, JoinColumn, Index, PrimaryGeneratedColumn } from "typeorm";
 
-import { IsNumberString, Length, IsNotEmpty, IsInt, IsEmail, IsArray } from "class-validator";
+import { IsNumberString, Length, IsNotEmpty, IsInt } from "class-validator";
 
 import * as jwt from "jsonwebtoken";
 
@@ -20,7 +20,7 @@ export class ElectoralRegister {
   id: number
 
   @Column()
-  @ManyToOne(type => Persona, { cascade: true })
+  @ManyToOne(type => Persona)
   @JoinColumn({ name: 'ci' })
   @IsNumberString()
   @Length(7, 8)
@@ -46,11 +46,6 @@ export class ElectoralRegister {
   schoolId: number;
 
   @Column()
-  @IsEmail()
-  @IsNotEmpty()
-  email: string
-
-  @Column()
   @IsNotEmpty()
   type: string
 
@@ -58,14 +53,13 @@ export class ElectoralRegister {
   @IsNotEmpty()
   electionsIds: string
 
-  @Column()
-  @IsNotEmpty()
+  @Column({ nullable: true })
   authCode: string
 
-  @Column()
+  @Column({ nullable: true })
   accessCode: string
 
-  @Column()
+  @Column({ nullable: true })
   password: string
 
   generateToken(typeCode, code, expiresIn?) {
