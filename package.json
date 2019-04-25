@@ -8,9 +8,6 @@
     "type": "git",
     "url": "https://github.com/ianninirojas/core-voto-ucv.git"
   },
-  "engines": {
-    "node": ">=11.0.0"
-  },
   "devDependencies": {
     "@types/cors": "^2.8.4",
     "@types/crypto-js": "^3.1.43",
@@ -47,9 +44,11 @@
     "typeorm": "^0.2.16"
   },
   "scripts": {
-    "tsc": "tsc",
-    "start": "cross-env REACT_APP_ENV=\"development\" set debug=* && ts-node-dev --respawn --transpileOnly ./src/index.ts",
-    "gcp-build": "cross-env REACT_APP_ENV=\"production\" && tsc -p .",
+    "prepare": "npm run gcp-build",
+    "pretest": "npm run gcp-build",
+    "start-dev": "cross-env REACT_APP_ENV=\"development\" set debug=* && ts-node-dev --respawn --transpileOnly ./src/index.ts",
+    "start": "node ./src/index.js",
+    "gcp-build": "tsc -p .",
     "deploy": "gcloud app deploy"
   }
 }

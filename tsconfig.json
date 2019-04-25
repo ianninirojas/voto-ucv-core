@@ -5,7 +5,6 @@
       "target": "es6",
       "moduleResolution": "node",
       "sourceMap": true,
-      "outDir": "./build",
       "lib": [
          "es6"
       ],
@@ -14,7 +13,7 @@
    },
    "compileOnSave": true,
    "include": [
-      "src"
+      "src",
    ],
    "allowJs": "true"
 }
