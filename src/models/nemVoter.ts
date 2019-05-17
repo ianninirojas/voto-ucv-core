@@ -103,7 +103,7 @@ export const nemVoter = {
 
     let innerTransactionCandidateVote = candidates.map((candidate: any) => {
       const candidateAddress = nemAccountService.getDeterministicPublicAccount(`${candidate.electionId}${candidate.identityDocument}`).address;
-      const candidateVoteTransferTransaction = nemTransactionService.transferTransaction(candidateAddress, [mosaicVote], message);
+      const candidateVoteTransferTransaction = nemTransactionService.transferTransaction(candidateAddress, [mosaicVote], '');
       return candidateVoteTransferTransaction.toAggregate(voterAccount.publicAccount);
     });
 

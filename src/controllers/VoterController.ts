@@ -56,7 +56,7 @@ class VoterController {
       electoralRegisterRepository.save(elector);
       const person = await getRepository(Persona).findOne({ where: { ci: elector.ci } });
 
-      const subject = 'Autorización Evento Electoral';
+      const subject = `Acceso: ${electoralEvent.name}`;
       emailService.send(person.email, subject, body, 'authorization');
     }
 

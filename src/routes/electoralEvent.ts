@@ -20,6 +20,12 @@ router.get("/electoral-event/:publickey/activate", [checkJwt, checkRole(["ADMIN"
 
 router.get("/electoral-event/:publickey/finish", [checkJwt, checkRole(["ADMIN"])], ElectoralEventController.finish);
 
-router.get("/electoral-event/:publickey/create-electoral-register", [checkJwt, checkRole(["ADMIN"])], ElectoralEventController.createElectoralRegister);
+router.post("/electoral-event/:publickey/electoral-register", [checkJwt, checkRole(["ADMIN"])], ElectoralEventController.createElectoralRegister);
+
+router.get("/electoral-event/:publickey/electoral-register", ElectoralEventController.getElectoralRegister);
+
+router.get("/electoral-event/:publickey/electoral-register/:electorId", [checkJwt, checkRole(["ADMIN"])], ElectoralEventController.getElector);
+
+router.post("/electoral-event/:publickey/electoral-register/:electorId", [checkJwt, checkRole(["ADMIN"])], ElectoralEventController.updateElector);
 
 export default router;

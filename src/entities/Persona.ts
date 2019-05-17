@@ -48,12 +48,12 @@ export class Persona {
 
   @Column()
   @IsString()
-  @Length(3, 3)
+  @Length(1,1)
   inicialNombre2: string
 
   @Column()
   @IsString()
-  @Length(3, 3)
+  @Length(1,1)
   inicialApellido2: string
 
   @Column()
@@ -69,7 +69,6 @@ export class Persona {
   email: string
 
   @Column()
-  @IsPhoneNumber('VE')
   telefono: string
 
 }

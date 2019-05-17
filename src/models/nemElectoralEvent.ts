@@ -148,9 +148,9 @@ export const nemElectoralEvent = {
       if (!transactionElectoralEvent)
         return { activated: false, data: [{ electoralEvent: "evento electoral no existe" }] }
 
-      const getMosaicVoteResponse = await this.getMosaicVote(electoralEventPublicAccount);
-      if (getMosaicVoteResponse)
-        return { activated: false, data: [{ electoralEvent: "evento electoral ya está activo" }] }
+      // const getMosaicVoteResponse = await this.getMosaicVote(electoralEventPublicAccount);
+      // if (getMosaicVoteResponse)
+      //   return { activated: false, data: [{ electoralEvent: "evento electoral ya está activo" }] }
 
       const elections = await nemElection.getAll(electoralEventPublicKey);
       if (elections.length === 0)

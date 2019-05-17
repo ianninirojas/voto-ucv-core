@@ -6,7 +6,7 @@ import {
 
 import * as bcrypt from "bcryptjs";
 
-import { getRepository, In } from 'typeorm';
+import { getRepository, In, getConnection } from 'typeorm';
 
 // models
 import { nemElection } from '../models/nemElection';
@@ -241,19 +241,6 @@ const selectElectoralRegister = async (electoralEventPublickey: any) => {
   return { created: true, data: electoralRegister }
 }
 
-const sendAuthEmail = (elector: ElectoralRegister, to: string, tokenAuth: string, electoralEvent: any) => {
-
-  const subject = 'Autenticacion Evento Electoral';
-
-  const body = {
-    tokenAuth,
-    electoralEventPublickey: elector.electoralEventPublickey,
-    electoralEventName: electoralEvent.name
-  }
-
-  emailService.send(to, subject, body, 'authentication');
-}
-
 const storeSQLElectoralRegister = async (electoralRegister: any, electoralEvent: any) => {
   let electors = []
   for (const x of electoralRegister) {
@@ -315,8 +302,7 @@ export const nemElectoralRegister = {
     }
   },
 
-  async validateElectoralRegister(electoralEventPublickey: string, facultyId: string) {
-
+  async validateElectoralRegister(electoralEventPublickey: string) {
     const transactionElectoralRegister = await this.exist(electoralEventPublickey);
     if (!transactionElectoralRegister)
       return { validated: false, data: { electoralRegister: "evento electoral no posee registro electoral" } }
@@ -324,6 +310,9 @@ export const nemElectoralRegister = {
     const nemElectoralRegisterHash = JSON.parse(transactionElectoralRegister.message.payload).data;
     const electoralRegisterRepository = getRepository(ElectoralRegister);
     let electoralRegister = await electoralRegisterRepository.find({
+      where: {
+        electoralEventPublickey
+      },
       select: [
         'ci',
         'facultyId',
@@ -349,12 +338,21 @@ export const nemElectoralRegister = {
       return parseInt(a["ci"]) - parseInt(b["ci"]) || a["facultyId"] - b["facultyId"] || a["schoolId"] - b["schoolId"];
     });
 
-    const electoralRegisterHash = apostilleService.createHashApostille(JSON.stringify(electoralRegisterToHash))
+    const electoralRegisterHash = apostilleService.createHashApostille(JSON.stringify(electoralRegisterToHash));
+    return nemElectoralRegisterHash === electoralRegisterHash;
+  },
 
-    if (nemElectoralRegisterHash !== electoralRegisterHash) {
-      return false
+  async sendAuthEmail(to: string, tokenAuth: string, electoralEvent: any) {
+
+    const subject = `Autenticación: ${electoralEvent.name}`;
+
+    const body = {
+      tokenAuth,
+      electoralEventPublickey: electoralEvent.publickey,
+      electoralEventName: electoralEvent.name
     }
-    return true
+
+    emailService.send(to, subject, body, 'authentication');
   },
 
   async activateElectoralRegister(electoralEventPublickey: string) {
@@ -368,7 +366,7 @@ export const nemElectoralRegister = {
     const transactionElectoralEvent = await nemElectoralEvent.exist(electoralEventPublicAccount);
 
     const electoralEvent = JSON.parse(transactionElectoralEvent.message.payload).data
-
+    electoralEvent['publickey'] = electoralEventPublickey;
     let electors = [];
 
     const electoralRegisterRepository = getRepository(ElectoralRegister);
@@ -379,11 +377,30 @@ export const nemElectoralRegister = {
       elector.authCode = bcrypt.hashSync(authCode);
       electors.push(elector);
       const tokenAuth = elector.generateToken('auth', authCode);
-      sendAuthEmail(elector, person.email, tokenAuth, electoralEvent);
+      this.sendAuthEmail(person.email, tokenAuth, electoralEvent);
     }
     await getRepository(ElectoralRegister).save(electors);
 
     return { validated: true, data: { electoralRegister: "Registro electoral válido" } }
+  },
+
+  async getElectoralRegister(electoralEventPublickey: string) {
+    const validateElectoralRegister = await this.validateElectoralRegister(electoralEventPublickey);
+    // if (!validateElectoralRegister) {
+    //   return { valid: false, data: 'Registro Electoral no es válido' };
+    // }
+
+    const electoralRegister = await getConnection().query(`
+      SELECT electoral_register.ci, electoral_register.facultyId, electoral_register.schoolId, electoral_register.type, persona.nombre1, persona.apellido1, persona.inicialNombre2, persona.inicialApellido2
+      FROM electoral_register, persona
+      WHERE electoral_register.electoralEventPublickey='${electoralEventPublickey}' AND electoral_register.ci=persona.ci;
+    `)
+
+    electoralRegister.sort((a, b) => {
+      return a["apellido1"].localeCompare(b['apellido1']) || parseInt(a["ci"]) - parseInt(b["ci"]) || a["facultyId"] - b["facultyId"] || a["schoolId"] - b["schoolId"]
+    });
+
+    return { valid: true, data: electoralRegister };
   },
 
   exist(electoralEventPublickey: string) {

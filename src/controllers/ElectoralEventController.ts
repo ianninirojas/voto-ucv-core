@@ -1,11 +1,14 @@
 // modules
 
 import { Request, Response } from "express";
-import { getRepository } from "typeorm";
+import { getRepository, getConnection } from "typeorm";
+import * as bcrypt from "bcryptjs";
 
 // entities
 
+import { Persona } from "../entities/Persona";
 import { ElectoralEvent } from "../entities/ElectoralEvent";
+import { ElectoralRegister } from "../entities/ElectoralRegister";
 
 // models
 
@@ -15,6 +18,8 @@ import { nemElectoralRegister } from "../models/nemElectoralRegister";
 // services 
 
 import { nemAccountService } from '../services/nem.account.service';
+import { validate } from "class-validator";
+import { codeService } from "../services/code.service";
 
 // others
 
@@ -149,6 +154,99 @@ class ElectoralEventController {
       return res.status(400).send({ data: error });
     }
   }
+
+  static getElectoralRegister = async (req: Request, res: Response) => {
+    const electoralEventPublicKey = req.params.publickey;
+    try {
+      const response = await nemElectoralRegister.getElectoralRegister(electoralEventPublicKey);
+      if (!response.valid) {
+        return res.status(400).send({ data: response.data });
+      }
+      return res.status(200).send(response.data);
+    }
+    catch (error) {
+      console.log('error :', error);
+      return res.status(400).send({ data: error });
+    }
+  }
+
+  static getElector = async (req: Request, res: Response) => {
+    const electoralEventPublickey = req.params.publickey;
+    const electorId = req.params.electorId;
+
+    try {
+      const elector = await getConnection().query(`
+        SELECT electoral_register.ci, electoral_register.password, persona.nombre1, persona.apellido1, persona.nombre2, persona.apellido2, persona.email
+        FROM electoral_register, persona
+        WHERE electoral_register.electoralEventPublickey='${electoralEventPublickey}' AND electoral_register.ci=persona.ci AND persona.ci='${electorId}';
+    `);
+      elector[0]['password'] = elector[0]['password'] ? true : false;
+
+      return res.status(200).send({ elector: elector[0] });
+    }
+    catch (error) {
+      console.log('error :', error);
+      return res.status(400).send({ data: error });
+    }
+  }
+
+  static updateElector = async (req: Request, res: Response) => {
+    const electoralEventPublickey = req.params.publickey;
+    const personaId = req.params.electorId;
+    const { email } = req.body;
+
+    const personRepository = getRepository(Persona);
+    let person;
+    try {
+      person = await personRepository.findOneOrFail(personaId);
+    } catch (error) {
+      return res.status(404).send({ data: "Persona no encontrada" });
+    }
+
+    if (email !== undefined)
+      person.email = email;
+
+    const errors = await validate(person);
+    if (errors.length > 0) {
+      return res.status(400).send({ data: errors });
+    }
+
+    try {
+      await personRepository.save(person);
+    } catch (e) {
+      return res.status(409).send({ data: "correo ya está utilizado" });
+    }
+    
+    const electoralRegisterRepository = getRepository(ElectoralRegister);
+    let elector;
+    try {
+      elector = await getRepository(ElectoralRegister).findOne({ where: { ci: personaId, electoralEventPublickey } });
+    } catch (error) {
+      return res.status(404).send({ data: "Elector no encontrado" });
+    }
+    const authCode = codeService.generateCode();
+    elector.authCode = bcrypt.hashSync(authCode);
+    elector.accessCode = null;
+
+    try {
+      electoralRegisterRepository.save(elector);
+    } catch (e) {
+      return res.status(409).send({ data: "correo ya está utilizado" });
+    }
+
+    const electoralEventPublicAccount = nemAccountService.getPublicAccountFromPublicKey(electoralEventPublickey);
+    const electoralEventTransaction = await nemElectoralEvent.exist(electoralEventPublicAccount);
+    if (!electoralEventTransaction) {
+      return res.status(400).send({ data: "Evento Electoral no existe" });
+    }
+    const electoralEvent = JSON.parse(electoralEventTransaction.message.payload).data;
+    electoralEvent['publickey'] = electoralEventPublickey;
+    const tokenAuth = elector.generateToken('auth', authCode);
+    nemElectoralRegister.sendAuthEmail(email, tokenAuth, electoralEvent);
+    
+    res.status(204).send();
+  }
+
 
 }
 

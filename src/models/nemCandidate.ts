@@ -59,7 +59,6 @@ export const nemCandidate = {
 
             if (!electoralCommissionValidateTransaction) {
               if (nemElectoralCommission.validateTransaction(transaction)) {
-                transaction.signer.address.plain()
                 const payload = JSON.parse(transaction.message.payload);
                 if (payload.code === CodeTypes.Vote) {
                   electoralCommissionValidateTransaction = true;

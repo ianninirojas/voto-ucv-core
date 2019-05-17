@@ -4,5 +4,3 @@ export interface Candidate {
   position: string,
   list?:string,
 }
-
-

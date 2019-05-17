@@ -15,20 +15,34 @@ const prod: ConnectionOptions = {
   },
   synchronize: true,
   logging: false,
-  connectTimeout: 30000,
-  acquireTimeout: 30000,
+  // connectTimeout: 2200,
+  // acquireTimeout: 2200,
   entities: [
     `${parentDir}/entities/*.js`,
   ]
 }
 
+// const dev: ConnectionOptions = {
+//   type: "mysql",
+//   host: "35.226.48.37",
+//   port: 3306,
+//   username: "root",
+//   password: "3k8J4TESma4HbvW",
+//   database: "voto_ucv",
+//   synchronize: true,
+//   logging: false,
+//   entities: [
+//     `${parentDir}/entities/*.ts`,
+//   ]
+// }
+
 const dev: ConnectionOptions = {
   type: "mysql",
-  host: "35.226.48.37",
+  host: "localhost",
   port: 3306,
   username: "root",
-  password: "3k8J4TESma4HbvW",
-  database: "voto_ucv",
+  password: "",
+  database: "voto-ucv",
   synchronize: true,
   logging: false,
   entities: [
@@ -37,12 +51,12 @@ const dev: ConnectionOptions = {
 }
 const dbConfig: ConnectionOptions = process.env.REACT_APP_ENV === "production" ? prod : dev;
 
-const dbConnection: Promise<Connection> = createConnection(dbConfig);
+// const dbConnection: Promise<Connection> = createConnection(dbConfig);
 
-console.log('process.env.REACT_APP_ENV :', process.env.REACT_APP_ENV);
+// console.log('process.env.REACT_APP_ENV :', process.env.REACT_APP_ENV);
 
-console.log('dbConfig :', dbConfig);
+// console.log('dbConfig :', dbConfig);
 
-console.log('dbConnection :', dbConnection.then(x => console.log('x ', x, ' x.entityMetadatas :', x.entityMetadatas)));
+// console.log('dbConnection :', dbConnection.then(x => console.log('x ', x, ' x.entityMetadatas :', x.entityMetadatas)));
 
-export { dbConnection };
+export { dbConfig };

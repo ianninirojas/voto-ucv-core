@@ -5,10 +5,11 @@ import bodyParser from "body-parser";
 import helmet from "helmet";
 import cors from "cors";
 import routes from "./routes";
-import { dbConnection } from "./config";
+// import { dbConnection } from "./config";
+import { dbConfig } from "./config";
 
 //Connects to the Database -> then starts the express
-dbConnection
+createConnection(dbConfig)
   .then(async connection => {
     // Create a new express application instance
     const app = express();
