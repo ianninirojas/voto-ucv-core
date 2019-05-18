@@ -15,11 +15,18 @@ import { nemVoter } from "../models/nemVoter";
 import { nemElection } from "../models/nemElection";
 import { nemAccountService } from "../services/nem.account.service";
 import { Persona } from "../entities/Persona";
+import { nemElectoralRegister } from "../models/nemElectoralRegister";
 
 class VoterController {
   static auth = async (req: Request, res: Response) => {
     const electoralEventPublickey = req.params.electoralEventPublickey
     const { identityDocument, code } = req.body.jwtPayload;
+
+    const validateElectoralRegister = await nemElectoralRegister.validateElectoralRegister(electoralEventPublickey);
+
+    if (!validateElectoralRegister) {
+      return res.status(404).send({ data: 'Registro electoral no válido' });
+    }
 
     const electoralRegisterRepository = getRepository(ElectoralRegister);
     let elector: ElectoralRegister;
@@ -70,6 +77,12 @@ class VoterController {
       return res.status(404).send({ data: 'No tiene acceso, faltan datos' });
     }
 
+    const validateElectoralRegister = await nemElectoralRegister.validateElectoralRegister(electoralEventPublickey);
+
+    if (!validateElectoralRegister) {
+      return res.status(404).send({ data: 'Registro electoral no válido' });
+    }
+
     const { identityDocument, code } = req.body.jwtPayload;
 
     const electoralRegisterRepository = getRepository(ElectoralRegister);
@@ -109,6 +122,12 @@ class VoterController {
 
     if (!(electoralEventPublickey && password)) {
       return res.status(404).send({ data: 'No tiene acceso, faltan datos' });
+    }
+
+    const validateElectoralRegister = await nemElectoralRegister.validateElectoralRegister(electoralEventPublickey);
+
+    if (!validateElectoralRegister) {
+      return res.status(404).send({ data: 'Registro electoral no válido' });
     }
 
     const { identityDocument, code } = req.body.jwtPayload;
@@ -168,6 +187,12 @@ class VoterController {
 
     if (!(electoralEventPublickey && password)) {
       return res.status(404).send({ data: 'No tiene acceso, faltan datos' });
+    }
+    
+    const validateElectoralRegister = await nemElectoralRegister.validateElectoralRegister(electoralEventPublickey);
+
+    if (!validateElectoralRegister) {
+      return res.status(404).send({ data: 'Registro electoral no válido' });
     }
 
     const electoralRegisterRepository = getRepository(ElectoralRegister);

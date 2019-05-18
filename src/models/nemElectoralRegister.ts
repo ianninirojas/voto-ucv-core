@@ -229,7 +229,7 @@ const selectElectoralRegister = async (electoralEventPublickey: any) => {
       facultyId: elector.idFacultad,
       schoolId: elector.idEscuela,
       type: elector.type,
-      electionsIds: electionsIds,
+      electionsIds: electionsIds.toString(),
       electoralEventPublickey: electoralEventPublickey,
     });
   }
@@ -249,7 +249,7 @@ const storeSQLElectoralRegister = async (electoralRegister: any, electoralEvent:
     elector.facultyId = x.facultyId;
     elector.schoolId = x.schoolId;
     elector.type = x.type;
-    elector.electionsIds = x.electionsIds.toString();
+    elector.electionsIds = x.electionsIds;
     elector.electoralEventPublickey = x.electoralEventPublickey;
     electors.push(elector);
   }
@@ -339,6 +339,7 @@ export const nemElectoralRegister = {
     });
 
     const electoralRegisterHash = apostilleService.createHashApostille(JSON.stringify(electoralRegisterToHash));
+
     return nemElectoralRegisterHash === electoralRegisterHash;
   },
 
@@ -359,7 +360,7 @@ export const nemElectoralRegister = {
     const electoralEventPublicAccount = nemAccountService.getPublicAccountFromPublicKey(electoralEventPublickey);
     const validateElectoralRegister = await this.validateElectoralRegister(electoralEventPublickey);
 
-    if (validateElectoralRegister) {
+    if (!validateElectoralRegister) {
       return { validated: false, data: { electoralRegister: "Registro electoral no válido" } }
     }
 
@@ -370,7 +371,7 @@ export const nemElectoralRegister = {
     let electors = [];
 
     const electoralRegisterRepository = getRepository(ElectoralRegister);
-    let electoralRegister = await electoralRegisterRepository.find();
+    let electoralRegister = await electoralRegisterRepository.find({ where: { electoralEventPublickey } });
     for (const elector of electoralRegister) {
       const person = await getRepository(Persona).findOne({ where: { ci: elector.ci } });
       const authCode = codeService.generateCode();
@@ -386,9 +387,9 @@ export const nemElectoralRegister = {
 
   async getElectoralRegister(electoralEventPublickey: string) {
     const validateElectoralRegister = await this.validateElectoralRegister(electoralEventPublickey);
-    // if (!validateElectoralRegister) {
-    //   return { valid: false, data: 'Registro Electoral no es válido' };
-    // }
+    if (!validateElectoralRegister) {
+      return { valid: false, data: 'Registro Electoral no es válido' };
+    }
 
     const electoralRegister = await getConnection().query(`
       SELECT electoral_register.ci, electoral_register.facultyId, electoral_register.schoolId, electoral_register.type, persona.nombre1, persona.apellido1, persona.inicialNombre2, persona.inicialApellido2

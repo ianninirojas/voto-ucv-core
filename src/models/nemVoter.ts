@@ -21,9 +21,7 @@ import { nemTransactionService } from "../services/nem.transaction.service";
 import { CodeTypes } from '../constants/codeType';
 import { nemElectoralEvent } from './nemElectoralEvent';
 import { nemMosaicService } from '../services/nem.mosaic.service';
-import { TypeCandidate } from '../constants/typeCandidate';
-import { listenerService } from '../services/nem.listener.service';
-
+import { nemElectoralRegister } from './nemElectoralRegister';
 // Lista de pasos para realizar la votacion
 // 1. Verificar que el token haya sido creado
 // 2. Verificar que el voter no haya votado
@@ -123,6 +121,13 @@ export const nemVoter = {
       const electoralCommissionPrivateKey = nemElectoralCommission.getElectoralCommissionPrivateKey()
       const electoralCommissionAccount = nemAccountService.getAccountFromPrivateKey(electoralCommissionPrivateKey);
 
+      const validateElectoralRegister = await nemElectoralRegister.validateElectoralRegister(electoralEventPublickey);
+
+      if (!validateElectoralRegister) {
+        console.log('data corrupta');
+        return { voted: false, data: "Registro electoral no válido" }
+      }
+
       // PASO 1
       const isItTimeToVote = await nemElectoralEvent.isItTimeToVote(electoralEventPublickey);
       if (!isItTimeToVote) {
@@ -158,7 +163,7 @@ export const nemVoter = {
         // PASO 3
         console.log('increment token');
         await nemTransactionService.announceTransactionAsync(electoralCommissionAccount.address, mosaicSupplyChangeSignedTransaction);
-        
+
         // PASO 5      
         console.log('send token to voter');
         await nemTransactionService.announceTransactionAsync(voterAccount.address, voteFeeVoterSignedTransaction);

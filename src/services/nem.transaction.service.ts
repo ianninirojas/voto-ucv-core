@@ -72,7 +72,7 @@ export const nemTransactionService = {
 
   announceTransactionAsync(address: Address, signedTransaction: SignedTransaction) {
     const listener = new listenerService();
-    const amountOfConfirmationsToSkip = 3;
+    const amountOfConfirmationsToSkip = 2;
     let announceTransactionSubscribe = undefined;
     return new Promise((resolve, reject) => {
       listener.open().then(() => {

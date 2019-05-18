@@ -30,8 +30,8 @@ class ElectoralEventController {
     // buscar registros mas recientes
     try {
       let electoralEventsHash = await electoralEventRepository.find({
-        skip: req.body.index,
-        take: 10
+        // skip: req.body.index,
+        // take: 10
       });
       const electoralEvents = await nemElectoralEvent.getAll(electoralEventsHash);
 
