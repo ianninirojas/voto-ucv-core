@@ -15,7 +15,8 @@ import {
   SignedTransaction,
   TransferTransaction,
   AggregateTransaction,
-  AggregateTransactionCosignature
+  AggregateTransactionCosignature,
+  Message
 } from 'nem2-sdk';
 
 import { env } from "../config";
@@ -27,12 +28,12 @@ import { listenerService } from "../services/nem.listener.service";
 
 export const nemTransactionService = {
 
-  transferTransaction(recipent: Address, mosaics: Mosaic[], message: string) {
+  transferTransaction(recipent: Address, mosaics: Mosaic[], message: Message) {
     return TransferTransaction.create(
       Deadline.create(),
       recipent,
       mosaics,
-      PlainMessage.create(message),
+      message,
       recipent.networkType
     );
   },

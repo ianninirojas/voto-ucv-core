@@ -9,7 +9,9 @@ import {
   MosaicSupplyType,
   NetworkCurrencyMosaic,
   MosaicId,
-  AggregateTransaction
+  AggregateTransaction,
+  EncryptedMessage,
+  PlainMessage
 } from 'nem2-sdk';
 
 //Models
@@ -28,7 +30,7 @@ import { nemElectoralRegister } from './nemElectoralRegister';
 // 3. Modificar la cantidad de token de acuerdo a los votos emitidos
 // 4. Calcular fee de para la transaccion del voter
 // 5. Enviar fee+token a la direccion random del voter
-// 6. Enviar voto a la direccion del candidato
+// 6. Enviar voto a la direccion de la eleccion que almacena los votos
 
 export const nemVoter = {
 
@@ -41,7 +43,7 @@ export const nemVoter = {
   calculateVoteFee(mosaics: any, numberVotes: any) {
     const electoralCommissionPrivateKey = nemElectoralCommission.getElectoralCommissionPrivateKey()
     const electoralCommissionAccount = nemAccountService.getAccountFromPrivateKey(electoralCommissionPrivateKey);
-    const tx = nemTransactionService.transferTransaction(electoralCommissionAccount.address, mosaics, "");
+    const tx = nemTransactionService.transferTransaction(electoralCommissionAccount.address, mosaics, PlainMessage.create(''));
     return tx.maxFee.compact() * numberVotes;
   },
 
@@ -88,44 +90,75 @@ export const nemVoter = {
     const message = JSON.stringify({
       code: CodeTypes.TransferMosaicToVote
     })
-    const voteFeeVoterTransferTransaction = nemTransactionService.transferTransaction(voterAccountAddress, mosaicsVoter, message);
+    const voteFeeVoterTransferTransaction = nemTransactionService.transferTransaction(voterAccountAddress, mosaicsVoter, PlainMessage.create(message));
     const voteFeeVoterSignedTransaction = nemTransactionService.signTransaction(electoralCommissionAccount, voteFeeVoterTransferTransaction);
     return voteFeeVoterSignedTransaction
   },
 
-  // 6. Enviar voto a respectivos candidatos
-  sendVotesToCandidates(candidates: any[], voterAccount: Account, electoralCommissionAccount: Account, mosaicVote: any, ) {
+  // 6. Enviar voto a la direccion de la eleccion que almacena los votos
+  sendVotesToCandidates(candidates: any[], electoralCommissionAccount: Account) {
+    let innerTransactionCandidateVote = candidates.map((candidate: any) => {
+      const message = JSON.stringify({
+        code: CodeTypes.Vote,
+        data: {
+          votes: candidate.votes
+        }
+      })
+      const candidateAddress = nemAccountService.getDeterministicPublicAccount(`${candidate.electionId}${candidate.identityDocument}`).address;
+      const candidateVoteTransferTransaction = nemTransactionService.transferTransaction(candidateAddress, [], PlainMessage.create(message));
+      return candidateVoteTransferTransaction.toAggregate(electoralCommissionAccount.publicAccount);
+    });
     const message = JSON.stringify({
       code: CodeTypes.Vote
     })
-
-    let innerTransactionCandidateVote = candidates.map((candidate: any) => {
-      const candidateAddress = nemAccountService.getDeterministicPublicAccount(`${candidate.electionId}${candidate.identityDocument}`).address;
-      const candidateVoteTransferTransaction = nemTransactionService.transferTransaction(candidateAddress, [mosaicVote], '');
-      return candidateVoteTransferTransaction.toAggregate(voterAccount.publicAccount);
-    });
-
-    const voterAlreadyVoteTransferTransaction = nemTransactionService.transferTransaction(voterAccount.address, [], message);
+    const voterAlreadyVoteTransferTransaction = nemTransactionService.transferTransaction(electoralCommissionAccount.address, [], PlainMessage.create(message));
     innerTransactionCandidateVote.push(voterAlreadyVoteTransferTransaction.toAggregate(electoralCommissionAccount.publicAccount));
 
     const candidatesVoteAggregateTransaction = nemTransactionService.aggregateTransaction(innerTransactionCandidateVote, []);
-    const cosignatories: Account[] = [electoralCommissionAccount];
 
-    const candidatesVoteSignedTransaction = nemTransactionService.signTransactionWithCosignatories(voterAccount, cosignatories, candidatesVoteAggregateTransaction);
+    const candidatesVoteSignedTransaction = nemTransactionService.signTransaction(electoralCommissionAccount, candidatesVoteAggregateTransaction);
     return candidatesVoteSignedTransaction;
   },
 
-  async vote(voterAccount: Account, electoralEventPublickey: string, candidates: any) {
+  sendVote(elections: any, voterAccount: Account, electoralCommissionAccount: Account, mosaicVote: any) {
+    const electionVoteTransactions = []
+    for (const election of elections) {
+      for (const candidate of election.candidates) {
+        const message = JSON.stringify({
+          identityDocument: candidate.identityDocument,
+          electionId: candidate.electionId,
+        });
+        const electionVotePublicAccount = nemAccountService.getDeterministicPublicAccount(`${election.id} - Votos`.toLowerCase());
+        const electoralCommissionPrivateKey = nemElectoralCommission.getElectoralCommissionPrivateKey()
+        const encryptedVote = EncryptedMessage.create(message, electionVotePublicAccount, electoralCommissionPrivateKey);
+        const electionVoteTransaction = nemTransactionService.transferTransaction(electionVotePublicAccount.address, [], encryptedVote).toAggregate(voterAccount.publicAccount);
+        electionVoteTransactions.push(electionVoteTransaction);
+      }
+    }
+
+    const message = JSON.stringify({
+      code: CodeTypes.Vote
+    });
+
+    const voterAlreadyVoteTransferTransaction = nemTransactionService.transferTransaction(voterAccount.address, [], PlainMessage.create(message)).toAggregate(electoralCommissionAccount.publicAccount);
+    const innerTransactions = [...electionVoteTransactions, voterAlreadyVoteTransferTransaction];
+    const cosignatories: Account[] = [electoralCommissionAccount];
+    const electionVoteAggregateTransaction = nemTransactionService.aggregateTransaction(innerTransactions, []);
+    const electionVoteSignedTransaction = nemTransactionService.signTransactionWithCosignatories(voterAccount, cosignatories, electionVoteAggregateTransaction);
+    return electionVoteSignedTransaction;
+  },
+
+  async vote(identityDocument: string, voterAccount: Account, electoralEventPublickey: string, elections: any) {
     try {
       const electoralEventPublicAccount = nemAccountService.getPublicAccountFromPublicKey(electoralEventPublickey);
       const electoralCommissionPrivateKey = nemElectoralCommission.getElectoralCommissionPrivateKey()
       const electoralCommissionAccount = nemAccountService.getAccountFromPrivateKey(electoralCommissionPrivateKey);
 
-      const validateElectoralRegister = await nemElectoralRegister.validateElectoralRegister(electoralEventPublickey);
+      const electoralRegisterPublicAccount = nemAccountService.getDeterministicPublicAccount(`${electoralEventPublickey} - Registro Electoral`.toLowerCase());
+      const validElector = await nemElectoralRegister.validateElector(electoralRegisterPublicAccount.publicKey, identityDocument);
 
-      if (!validateElectoralRegister) {
-        console.log('data corrupta');
-        return { voted: false, data: "Registro electoral no válido" }
+      if (!validElector) {
+        return { voted: false, data: "No está incluido en el registro electoral" }
       }
 
       // PASO 1
@@ -144,19 +177,20 @@ export const nemVoter = {
         return { voted: false, data: "Ya votó" }
 
       // PASO 3
-      const numberVotes: number = candidates.length;
-      const mosaicSupplyChangeSignedTransaction = this.incrementMosaicVote(numberVotes, mosaicIdToVote, electoralCommissionAccount);
+      const mosaicSupplyChangeSignedTransaction = this.incrementMosaicVote(1, mosaicIdToVote, electoralCommissionAccount);
       // PASO 4
-      const fee = this.calculateVoteFee([new Mosaic(mosaicIdToVote, UInt64.fromUint(1))], numberVotes);
+      const fee = this.calculateVoteFee([new Mosaic(mosaicIdToVote, UInt64.fromUint(1))], 1);
       const nemFee = NetworkCurrencyMosaic.createRelative(fee);
-      const mosaicVoteToVoter = new Mosaic(mosaicIdToVote, UInt64.fromUint(numberVotes));
+      const mosaicVoteToVoter = new Mosaic(mosaicIdToVote, UInt64.fromUint(1));
       const mosaicsVoter = [mosaicVoteToVoter, nemFee];
-      const mosaicVoteToCandidate = new Mosaic(mosaicIdToVote, UInt64.fromUint(1));
+      const mosaicVote = new Mosaic(mosaicIdToVote, UInt64.fromUint(1));
+
       // PASO 5 
       const voteFeeVoterSignedTransaction = this.sendVoteFeeToVoter(mosaicsVoter, voterAccount.address, electoralCommissionAccount);
-      //  PASO 6
-      const candidatesVoteSignedTransaction = this.sendVotesToCandidates(candidates, voterAccount, electoralCommissionAccount, mosaicVoteToCandidate);
 
+      //  PASO 6
+      const voteSignedTransaction = this.sendVote(elections, voterAccount, electoralCommissionAccount, mosaicVote);
+      // const candidatesVoteSignedTransaction = this.sendVotesToCandidates(candidates, voterAccount, electoralCommissionAccount, mosaicVoteToCandidate);
       const voterHaveMosaic = await this.voterHaveMosaic(voterAccount);
       console.log('voterHaveMosaic :', voterHaveMosaic);
       if (!voterHaveMosaic) {
@@ -170,7 +204,7 @@ export const nemVoter = {
       }
       //  PASO 6
       console.log('send token to candidate');
-      await nemTransactionService.announceTransactionAsync(voterAccount.address, candidatesVoteSignedTransaction);
+      await nemTransactionService.announceTransactionAsync(voterAccount.address, voteSignedTransaction);
       return { voted: true, data: "Listo" }
     }
     catch (error) {

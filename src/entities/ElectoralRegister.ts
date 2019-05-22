@@ -31,28 +31,6 @@ export class ElectoralRegister {
   @IsNotEmpty()
   electoralEventPublickey: string
 
-  @Column()
-  @ManyToOne(type => Faculty, { cascade: true })
-  @JoinColumn({ name: 'facultyId' })
-  @IsInt()
-  @IsNotEmpty()
-  facultyId: number;
-
-  @Column()
-  @ManyToOne(type => School, { cascade: true })
-  @JoinColumn({ name: 'schoolId' })
-  @IsInt()
-  @IsNotEmpty()
-  schoolId: number;
-
-  @Column()
-  @IsNotEmpty()
-  type: string
-
-  @Column()
-  @IsNotEmpty()
-  electionsIds: string
-
   @Column({ nullable: true })
   authCode: string
 

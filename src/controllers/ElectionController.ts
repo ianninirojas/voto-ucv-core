@@ -14,7 +14,23 @@ class ElectionController {
       if (!response.created) {
         return res.status(400).send({ data: response.data });
       }
-      return res.status(200).send({ data: "Election successfully created" });
+      return res.status(200).send({ data: "Elección creada exitosamente" });
+    }
+    catch (error) {
+      console.log('error', error)
+      return res.status(500).send({ data: { message: 'error' } });
+    }
+  }
+
+  static associateCandidates = async (req: Request, res: Response) => {
+    const { election, candidates } = req.body;
+    const electoralEventPublicKey = req.params.electoralEventPublicKey;
+    try {
+      const response = await nemElection.associateCandidates(election, candidates, electoralEventPublicKey);
+      if (!response.created) {
+        return res.status(400).send({ data: { notValidCandidates: response.data, code: '00' } });
+      }
+      return res.status(200).send({ data: "Candidatos asociados exitosamente" });
     }
     catch (error) {
       console.log('error', error)
@@ -32,14 +48,12 @@ class ElectionController {
     }
     try {
       let elections;
-
       if (electionIds.length > 0) {
         elections = await nemElection.getAll(electoralEventPublicKey, electionIds);
       }
       else {
         elections = await nemElection.getAll(electoralEventPublicKey);
       }
-
       res.status(200).send(elections);
     }
     catch (error) {
@@ -52,8 +66,8 @@ class ElectionController {
     const electoralEventPublicKey = req.params.electoralEventPublicKey;
     const { election } = req.body;
     try {
-      const elections = await nemElection.result(electoralEventPublicKey, election);
-      res.status(200).send(elections);
+      const result = await nemElection.result(electoralEventPublicKey, election);
+      res.status(200).send(result);
     }
     catch (error) {
       console.log('error :', error);

@@ -111,6 +111,7 @@ class ElectoralEventController {
   }
 
   static activate = async (req: Request, res: Response) => {
+    req.setTimeout(0, () => { });
     const electoralEventPublicKey = req.params.publickey
     try {
       const response = await nemElectoralEvent.activate(electoralEventPublicKey);
@@ -140,10 +141,27 @@ class ElectoralEventController {
     }
   }
 
-  static createElectoralRegister = async (req: Request, res: Response) => {
+  static totalize = async (req: Request, res: Response) => {
+    req.setTimeout(0, () => { });
     const electoralEventPublicKey = req.params.publickey;
     try {
-      const response = await nemElectoralRegister.storeElectoralRegister(electoralEventPublicKey);
+      const response = await nemElectoralEvent.totalize(electoralEventPublicKey);
+      if (!response.totalize) {
+        return res.status(400).send({ data: response.data });
+      }
+      return res.status(200).send({ data: response.data });
+    }
+    catch (error) {
+      console.log('error :', error);
+      return res.status(400).send({ data: error });
+    }
+  }
+
+  static createElectoralRegister = async (req: Request, res: Response) => {
+    req.setTimeout(0, () => { });
+    const electoralEventPublicKey = req.params.publickey;
+    try {
+      const response = await nemElectoralRegister.create(electoralEventPublicKey);
       if (!response.created) {
         return res.status(400).send({ data: response.data });
       }
@@ -158,7 +176,7 @@ class ElectoralEventController {
   static getElectoralRegister = async (req: Request, res: Response) => {
     const electoralEventPublicKey = req.params.publickey;
     try {
-      const response = await nemElectoralRegister.getElectoralRegister(electoralEventPublicKey);
+      const response = await nemElectoralRegister.get(electoralEventPublicKey);
       if (!response.valid) {
         return res.status(400).send({ data: response.data });
       }
@@ -216,7 +234,7 @@ class ElectoralEventController {
     } catch (e) {
       return res.status(409).send({ data: "correo ya está utilizado" });
     }
-    
+
     const electoralRegisterRepository = getRepository(ElectoralRegister);
     let elector;
     try {
@@ -243,10 +261,9 @@ class ElectoralEventController {
     electoralEvent['publickey'] = electoralEventPublickey;
     const tokenAuth = elector.generateToken('auth', authCode);
     nemElectoralRegister.sendAuthEmail(email, tokenAuth, electoralEvent);
-    
+
     res.status(204).send();
   }
-
 
 }
 

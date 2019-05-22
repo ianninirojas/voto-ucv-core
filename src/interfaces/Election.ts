@@ -1,8 +1,5 @@
-// interfaces
-
-import { Candidate } from "../interfaces/Candidate";
-
 export interface Election {
+  id?: string,
   name: string,
   type: string,
   levelElection: string,
@@ -12,5 +9,4 @@ export interface Election {
   schoolId: string,
   allowedVotes: string,
   period: string,
-  candidates: Candidate[]
 }

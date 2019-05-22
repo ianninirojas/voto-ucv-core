@@ -22,10 +22,11 @@ class VoterController {
     const electoralEventPublickey = req.params.electoralEventPublickey
     const { identityDocument, code } = req.body.jwtPayload;
 
-    const validateElectoralRegister = await nemElectoralRegister.validateElectoralRegister(electoralEventPublickey);
+    const electoralRegisterPublicAccount = nemAccountService.getDeterministicPublicAccount(`${electoralEventPublickey} - Registro Electoral`.toLowerCase());
+    const validElector = await nemElectoralRegister.validateElector(electoralRegisterPublicAccount.publicKey, identityDocument);
 
-    if (!validateElectoralRegister) {
-      return res.status(404).send({ data: 'Registro electoral no válido' });
+    if (!validElector) {
+      return { voted: false, data: "No está incluido en el registro electoral" }
     }
 
     const electoralRegisterRepository = getRepository(ElectoralRegister);
@@ -41,7 +42,7 @@ class VoterController {
     }
     catch (error) {
       console.log('error :', error);
-      return res.status(404).send({ data: 'No está seleccionado para votar en este evento electoral' });
+      return res.status(404).send({ data: 'Ocurrió un error, intente nuevamente' });
     }
 
     if (!elector.checkIfUnencryptedAuthCodeIsValid(code)) {
@@ -73,17 +74,18 @@ class VoterController {
   static access = async (req: Request, res: Response) => {
     const electoralEventPublickey = req.params.electoralEventPublickey
 
-    if (!(electoralEventPublickey)) {
+    const { identityDocument, code } = req.body.jwtPayload;
+
+    if (!(electoralEventPublickey || !identityDocument || !code)) {
       return res.status(404).send({ data: 'No tiene acceso, faltan datos' });
     }
 
-    const validateElectoralRegister = await nemElectoralRegister.validateElectoralRegister(electoralEventPublickey);
+    const electoralRegisterPublicAccount = nemAccountService.getDeterministicPublicAccount(`${electoralEventPublickey} - Registro Electoral`.toLowerCase());
+    const validElector = await nemElectoralRegister.validateElector(electoralRegisterPublicAccount.publicKey, identityDocument);
 
-    if (!validateElectoralRegister) {
-      return res.status(404).send({ data: 'Registro electoral no válido' });
+    if (!validElector) {
+      return { voted: false, data: "No está incluido en el registro electoral" }
     }
-
-    const { identityDocument, code } = req.body.jwtPayload;
 
     const electoralRegisterRepository = getRepository(ElectoralRegister);
     let elector: ElectoralRegister;
@@ -98,7 +100,7 @@ class VoterController {
     }
     catch (error) {
       console.log('error :', error);
-      return res.status(404).send({ data: 'No está seleccionado para votar en este evento electoral' });
+      return res.status(404).send({ data: 'Ocurrió un error, intente nuevamente' });
     }
 
     if (!elector.checkIfUnencryptedAccessCodeIsValid(code)) {
@@ -120,17 +122,17 @@ class VoterController {
     const electoralEventPublickey = req.params.electoralEventPublickey
     const { password } = req.body;
 
-    if (!(electoralEventPublickey && password)) {
+    const { identityDocument, code } = req.body.jwtPayload;
+    if (!electoralEventPublickey || !password || !identityDocument || !code) {
       return res.status(404).send({ data: 'No tiene acceso, faltan datos' });
     }
 
-    const validateElectoralRegister = await nemElectoralRegister.validateElectoralRegister(electoralEventPublickey);
+    const electoralRegisterPublicAccount = nemAccountService.getDeterministicPublicAccount(`${electoralEventPublickey} - Registro Electoral`.toLowerCase());
+    const validElector = await nemElectoralRegister.validateElector(electoralRegisterPublicAccount.publicKey, identityDocument);
 
-    if (!validateElectoralRegister) {
-      return res.status(404).send({ data: 'Registro electoral no válido' });
+    if (!validElector) {
+      return { voted: false, data: "No está incluido en el registro electoral" }
     }
-
-    const { identityDocument, code } = req.body.jwtPayload;
 
     const electoralRegisterRepository = getRepository(ElectoralRegister);
     let elector: ElectoralRegister;
@@ -145,7 +147,7 @@ class VoterController {
     }
     catch (error) {
       console.log('error', error)
-      return res.status(404).send({ data: 'No está seleccionado para votar en este evento electoral' });
+      return res.status(404).send({ data: 'Ocurrió un error, intente nuevamente' });
     }
 
     const isItTimeToVote = await nemElectoralEvent.isItTimeToVote(electoralEventPublickey);
@@ -163,6 +165,7 @@ class VoterController {
         return res.status(404).send({ data: 'Contraseña no coincide con la registrada' });
       }
     }
+
     const seed = { electoralEventPublickey, password, identityDocument, code }
 
     const voterAccount = nemVoter.getAccount(seed);
@@ -174,7 +177,7 @@ class VoterController {
     const token = elector.generateToken('vote', code, '10m');
 
     res.setHeader('token', token)
-    const elections = await nemElection.getAll(electoralEventPublickey, elector.electionsIds.split(','))
+    const elections = await nemElection.getAll(electoralEventPublickey, validElector.electionsIds.split(','))
     return res.status(200).send(elections);
   }
 
@@ -182,17 +185,11 @@ class VoterController {
     req.setTimeout(0, () => { });
 
     const electoralEventPublickey = req.params.electoralEventPublickey
-    const { candidates, password } = req.body;
+    const { elections, password } = req.body;
     const { identityDocument, code } = req.body.jwtPayload;
 
     if (!(electoralEventPublickey && password)) {
       return res.status(404).send({ data: 'No tiene acceso, faltan datos' });
-    }
-    
-    const validateElectoralRegister = await nemElectoralRegister.validateElectoralRegister(electoralEventPublickey);
-
-    if (!validateElectoralRegister) {
-      return res.status(404).send({ data: 'Registro electoral no válido' });
     }
 
     const electoralRegisterRepository = getRepository(ElectoralRegister);
@@ -208,7 +205,7 @@ class VoterController {
     }
     catch (error) {
       console.log('error :', error);
-      return res.status(404).send({ data: 'No está seleccionado para votar en este evento electoral' });
+      return res.status(404).send({ data: 'Ocurrió un error, itente nuevamente' });
     }
 
     if (!elector.checkIfUnencryptedPasswordIsValid(password)) {
@@ -219,7 +216,7 @@ class VoterController {
       const seed = { electoralEventPublickey, password, identityDocument, code }
       const voterAccount = nemVoter.getAccount(seed);
 
-      const response = await nemVoter.vote(voterAccount, electoralEventPublickey, candidates);
+      const response = await nemVoter.vote(identityDocument, voterAccount, electoralEventPublickey, elections);
       if (!response.voted) {
         return res.status(400).send({ data: response.data });
       }

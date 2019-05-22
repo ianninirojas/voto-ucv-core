@@ -16,4 +16,6 @@ router.post("/electoral-event/:electoralEventPublicKey/election/result", Electio
 
 router.post("/electoral-event/:electoralEventPublicKey/election", [checkJwt, checkRole(["ADMIN"])], ElectionController.create);
 
+router.post("/electoral-event/:electoralEventPublicKey/election/:electionId", [checkJwt, checkRole(["ADMIN"])], ElectionController.associateCandidates);
+
 export default router;
